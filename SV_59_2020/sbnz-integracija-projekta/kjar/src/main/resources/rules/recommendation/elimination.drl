@@ -1,0 +1,13 @@
+package rules.recommendation;
+
+import com.ftn.sbnz.model.Server;
+import com.ftn.sbnz.model.SearchFilters;
+
+rule "Eliminate expensive servers for LOW budget"
+    when
+        $s: Server(pricePerMonth > 90)
+        $f: SearchFilters(budget == SearchFilters.Budget.LOW)
+    then
+        retract($s);
+        System.out.println("Server " + $s.getName() + " eliminated due to LOW budget constraints.");
+end

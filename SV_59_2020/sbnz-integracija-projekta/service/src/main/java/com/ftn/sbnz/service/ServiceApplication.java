@@ -81,7 +81,7 @@ public class ServiceApplication  {
 		filters.setEcoPriority(true);
 		filters.setDdosProtection(true);
 		filters.setEncryptedStorage(true);
-		filters.setBudget(SearchFilters.Budget.MEDIUM);
+		filters.setBudget(SearchFilters.Budget.LOW);
 
 
 		// Insert into session
