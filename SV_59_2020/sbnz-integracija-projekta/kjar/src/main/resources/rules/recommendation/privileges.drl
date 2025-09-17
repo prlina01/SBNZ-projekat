@@ -1,0 +1,40 @@
+package rules.recommendation;
+
+import com.ftn.sbnz.model.User;
+import com.ftn.sbnz.model.Rental;
+
+rule "Bronze Status"
+    when
+        $u: User(status == User.UserStatus.NONE)
+        Number(intValue >= 3, intValue < 5) from accumulate(
+            Rental(user == $u),
+            count(1)
+        )
+    then
+        modify($u) { setStatus(User.UserStatus.BRONZE) };
+        System.out.println("User " + $u.getUsername() + " promoted to BRONZE status.");
+end
+
+rule "Silver Status"
+    when
+        $u: User(status in (User.UserStatus.NONE, User.UserStatus.BRONZE))
+        Number(intValue >= 5, intValue < 7) from accumulate(
+            Rental(user == $u),
+            count(1)
+        )
+    then
+        modify($u) { setStatus(User.UserStatus.SILVER) };
+        System.out.println("User " + $u.getUsername() + " promoted to SILVER status.");
+end
+
+rule "Gold Status"
+    when
+        $u: User(status in (User.UserStatus.NONE, User.UserStatus.BRONZE, User.UserStatus.SILVER))
+        Number(intValue >= 7) from accumulate(
+            Rental(user == $u),
+            count(1)
+        )
+    then
+        modify($u) { setStatus(User.UserStatus.GOLD) };
+        System.out.println("User " + $u.getUsername() + " promoted to GOLD status.");
+end

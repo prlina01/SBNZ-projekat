@@ -1,0 +1,31 @@
+package rules.recommendation;
+
+import com.ftn.sbnz.model.Server;
+import com.ftn.sbnz.model.SearchFilters;
+
+rule "Eco Priority"
+    when
+        $s: Server()
+        $f: SearchFilters(ecoPriority == true, $s.ecoFriendly == true)
+    then
+        modify($s) { setScore($s.getScore() + 10) };
+        System.out.println("Eco priority bonus for server: " + $s.getName());
+end
+
+rule "DDoS Protection"
+    when
+        $s: Server()
+        $f: SearchFilters(ddosProtection == true, $s.ddosProtection == true)
+    then
+        modify($s) { setScore($s.getScore() + 5) };
+        System.out.println("DDoS protection bonus for server: " + $s.getName());
+end
+
+rule "Encrypted Storage"
+    when
+        $s: Server()
+        $f: SearchFilters(encryptedStorage == true, $s.encryptedStorage == true)
+    then
+        modify($s) { setScore($s.getScore() + 5) };
+        System.out.println("Encrypted storage bonus for server: " + $s.getName());
+end
