@@ -1,1 +1,99 @@
 package rules.cep;
+
+import com.ftn.sbnz.model.*;
+import java.util.Date;
+
+
+
+declare Rating
+    @role( event )
+    @timestamp( timestamp )
+end
+
+declare Rental
+    @role( event )
+    @timestamp( startDate )
+end
+
+declare WeightedScore
+    @role( event )
+end
+
+declare VelocityModifier
+    @role( event )
+end
+
+
+
+// Rule to calculate the purchase velocity (number of rentals in the last 21 days)
+rule "Calculate Purchase Velocity"
+when
+    $s: Server()
+    accumulate(
+        Rental(server == $s, startDate after new Date(System.currentTimeMillis() - 21L * 24 * 60 * 60 * 1000)) over window:time(21d),
+        $count: count(1)
+    )
+    $modifier: Number(doubleValue in (0.9, 1.0, 1.1)) from
+        ($count > 3 ? 1.1 : ($count < 2 ? 0.9 : 1.0))
+then
+    insert(new VelocityModifier($s, $modifier.doubleValue()));
+end
+
+// Rule to calculate a weighted score based on user status and rental duration
+rule "Calculate Weighted Score"
+when
+    $r: Rating($user: user, $rental: rental)
+    $u: User() from $user
+    $rent: Rental(startDate: startDate, endDate: endDate) from $rental
+    
+    
+    $rentalDays: Number() from ($rent.getEndDate().getTime() - $rent.getStartDate().getTime()) / (1000 * 60 * 60 * 24)
+
+    // Determine status multiplier directly in the 'when' part
+    $statusMultiplier: Number(doubleValue > 0) from
+        ($u.getStatus() == User.UserStatus.GOLD ? 1.5 :
+         $u.getStatus() == User.UserStatus.SILVER ? 1.2 :
+         $u.getStatus() == User.UserStatus.BRONZE ? 1.1 : 1.0)
+
+    
+    $durationMultiplier: Number() from 1.0 + ($rentalDays.doubleValue() / 30.0) * 0.1
+    
+    
+    $weightedValue: Number() from $r.getScore() * $statusMultiplier.doubleValue() * $durationMultiplier.doubleValue()
+then
+    
+    insert(new WeightedScore($r.getServer(), $weightedValue.doubleValue(), $rent.getPurpose()));
+end
+
+// Aggregate weighted scores over 30 days for each server
+rule "Aggregate Weighted Scores"
+when
+    $s: Server()
+    $vm: VelocityModifier(getServer() == $s, $mod: modifier)
+    accumulate(
+        WeightedScore(server == $s, $score: score) over window:time(30d),
+        $avgScore: average($score),
+        $count: count(1)
+    )
+    eval($count > 0)
+    $modifiedAvg: Number() from $avgScore * $mod
+    $normalizedAvg: Number() from ($modifiedAvg.doubleValue() / 10.0) * 5.0
+then
+    insert(new PerformanceEvent($s, $normalizedAvg.doubleValue()));
+end
+
+
+
+rule "Server performance is critically low"
+when
+    $pe: PerformanceEvent(averageRating < 1.5) // < 30% of 5
+then
+    insert(new PerformanceReport($pe.getServer(), "Performance for server " + $pe.getServer().getName() + " is critically low (<30%). Consider removing it."));
+end
+
+rule "Server performance is exceptionally high"
+when
+    $pe: PerformanceEvent(averageRating > 3.5) // > 70% of 5
+then
+    insert(new PerformanceReport($pe.getServer(), "Performance for server " + $pe.getServer().getName() + " is exceptionally high (>70%). Consider adding more capacity."));
+end

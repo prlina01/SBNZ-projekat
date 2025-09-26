@@ -5,7 +5,7 @@
     <kbase name="rules" packages="recommendation">
         <ksession name="k-session"/>
     </kbase>
-    <kbase name="cepKbase" eventProcessingMode="stream" packages="cep">
+    <kbase name="cepKbase" eventProcessingMode="stream" packages="cep, recommendation">
         <ksession name="cepKsession" clockType="pseudo"/>
     </kbase>
 </kmodule>

@@ -1,24 +1,26 @@
 package com.ftn.sbnz.model;
 
-import java.time.LocalDate;
+import java.util.Date;
 
 public class Rental {
 
     private Long id;
     private User user;
     private Server server;
-    private LocalDate startDate;
-    private LocalDate endDate;
+    private Date startDate;
+    private Date endDate;
+    private String purpose;
 
     public Rental() {
     }
 
-    public Rental(Long id, User user, Server server, LocalDate startDate, LocalDate endDate) {
+    public Rental(Long id, User user, Server server, Date startDate, Date endDate, String purpose) {
         this.id = id;
         this.user = user;
         this.server = server;
         this.startDate = startDate;
         this.endDate = endDate;
+        this.purpose = purpose;
     }
 
     // Getters and Setters
@@ -47,19 +49,27 @@ public class Rental {
         this.server = server;
     }
 
-    public LocalDate getStartDate() {
+    public Date getStartDate() {
         return startDate;
     }
 
-    public void setStartDate(LocalDate startDate) {
+    public void setStartDate(Date startDate) {
         this.startDate = startDate;
     }
 
-    public LocalDate getEndDate() {
+    public Date getEndDate() {
         return endDate;
     }
 
-    public void setEndDate(LocalDate endDate) {
+    public void setEndDate(Date endDate) {
         this.endDate = endDate;
+    }
+
+    public String getPurpose() {
+        return purpose;
+    }
+
+    public void setPurpose(String purpose) {
+        this.purpose = purpose;
     }
 }
