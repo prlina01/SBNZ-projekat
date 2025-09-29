@@ -1,0 +1,24 @@
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #f6f8fb 0%, #ffffff 100%);
+  color: var(--color-text-strong);
+}
+
+.app-main {
+  flex: 1;
+  width: min(1200px, 100%);
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.app-footer {
+  padding: 2rem 1.5rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}

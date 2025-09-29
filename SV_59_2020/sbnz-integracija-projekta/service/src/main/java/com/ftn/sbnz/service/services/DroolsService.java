@@ -1,6 +1,10 @@
-package com.ftn.sbnz.service;
+package com.ftn.sbnz.service.services;
 
-import com.ftn.sbnz.model.*;
+import com.ftn.sbnz.model.PerformanceReport;
+import com.ftn.sbnz.model.Rating;
+import com.ftn.sbnz.model.Rental;
+import com.ftn.sbnz.model.Server;
+import com.ftn.sbnz.model.User;
 import com.ftn.sbnz.service.dto.RatingDTO;
 import com.ftn.sbnz.service.dto.RentalDTO;
 import org.kie.api.runtime.KieSession;
@@ -32,36 +36,31 @@ public class DroolsService {
             throw new IllegalArgumentException("User or Server not found for IDs provided.");
         }
 
-        
-        long newId = System.currentTimeMillis(); 
+        long newId = System.currentTimeMillis();
         Rental newRental = new Rental(newId, user.get(), server.get(), new Date(), null, rentalDTO.getPurpose());
-        
+
         log.info("Creating and inserting new rental: {}", newRental);
         kieSession.insert(newRental);
-        
-        // Firing rules here is optional, but can be useful if some rules
-        // should react immediately to a new rental.
+
         kieSession.fireAllRules();
 
         return newRental;
     }
 
     public void addRating(RatingDTO ratingDTO) {
-        // Find User, Server, and Rental from the session
         Optional<User> user = findFact(User.class, ratingDTO.getUserId());
         Optional<Server> server = findFact(Server.class, ratingDTO.getServerId());
         Optional<Rental> rental = findFact(Rental.class, ratingDTO.getRentalId());
 
         if (user.isPresent() && server.isPresent() && rental.isPresent()) {
-            // When a rating is added, the rental period ends.
             Rental rentalToEnd = rental.get();
             if (rentalToEnd.getEndDate() == null) {
-                rentalToEnd.setEndDate(new Date()); // Set end date to now
+                rentalToEnd.setEndDate(new Date());
                 kieSession.update(kieSession.getFactHandle(rentalToEnd), rentalToEnd);
             }
 
             Rating newRating = new Rating(
-                    System.currentTimeMillis(), // Generate a random ID for the rating
+                    System.currentTimeMillis(),
                     user.get(),
                     server.get(),
                     ratingDTO.getScore(),
@@ -72,15 +71,12 @@ public class DroolsService {
             log.info("Inserting new rating: {}", newRating);
             kieSession.insert(newRating);
 
-            // Fire rules and log reports
-            int firedRules = kieSession.fireAllRules();
-            // log.info("Fired {} rules.", firedRules);
+            kieSession.fireAllRules();
 
-            // Clean up reports after logging
             for (FactHandle handle : kieSession.getFactHandles(obj -> obj instanceof PerformanceReport)) {
                 PerformanceReport report = (PerformanceReport) kieSession.getObject(handle);
                 log.warn("ADMIN REPORT: {}", report.getMessage());
-                kieSession.delete(handle); // Remove the report to avoid re-logging
+                kieSession.delete(handle);
             }
         } else {
             log.error("Could not find all required facts to create a rating.");

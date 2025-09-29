@@ -1,12 +1,15 @@
-package com.ftn.sbnz.service;
+package com.ftn.sbnz.service.controllers;
 
+import com.ftn.sbnz.model.Rental;
 import com.ftn.sbnz.service.dto.RatingDTO;
 import com.ftn.sbnz.service.dto.RentalDTO;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.ftn.sbnz.service.services.DroolsService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import com.ftn.sbnz.model.Rental;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api")
@@ -14,7 +17,6 @@ public class DroolsController {
 
     private final DroolsService droolsService;
 
-    @Autowired
     public DroolsController(DroolsService droolsService) {
         this.droolsService = droolsService;
     }

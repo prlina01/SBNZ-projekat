@@ -1,104 +1,28 @@
-package com.ftn.sbnz.model.catalog;
+package com.ftn.sbnz.service.catalog.dto;
 
-import com.ftn.sbnz.model.Provider;
 import com.ftn.sbnz.model.Server;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
+public class ServiceOfferingResponse {
 
-@Entity
-@Table(name = "service_offerings")
-public class ServiceOffering {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(nullable = false)
     private String name;
-
-    @Column(nullable = false)
-    private String providerName;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    private String provider;
     private Server.Purpose purpose;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private Server.CpuPerformance cpuPerformance;
-
-    @Column(nullable = false)
     private int vcpuCount;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private Server.GpuModel gpuModel;
-
     private int gpuVram;
-
-    @Column(nullable = false)
     private int ram;
-
-    @Column(nullable = false)
     private int storageCapacity;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private Server.StorageType storageType;
-
     private boolean encryptedStorage;
     private int networkBandwidth;
     private boolean ddosProtection;
     private boolean highAvailability;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private Server.Region region;
-
     private boolean ecoFriendly;
     private double pricePerHour;
     private double pricePerMonth;
-
-    public ServiceOffering() {
-    }
-
-    public ServiceOffering(Long id, String name, String providerName) {
-        this.id = id;
-        this.name = name;
-        this.providerName = providerName;
-    }
-
-    public Server toServer() {
-        Server server = new Server();
-        server.setId(id);
-        server.setName(name);
-        server.setProvider(new Provider(null, providerName));
-        server.setPurpose(purpose);
-        server.setCpuPerformance(cpuPerformance);
-        server.setVcpuCount(vcpuCount);
-        server.setGpuModel(gpuModel);
-        server.setGpuVram(gpuVram);
-        server.setRam(ram);
-        server.setStorageCapacity(storageCapacity);
-        server.setStorageType(storageType);
-        server.setEncryptedStorage(encryptedStorage);
-        server.setNetworkBandwidth(networkBandwidth);
-        server.setDdosProtection(ddosProtection);
-        server.setHighAvailability(highAvailability);
-        server.setRegion(region);
-        server.setEcoFriendly(ecoFriendly);
-        server.setPricePerHour(pricePerHour);
-        server.setPricePerMonth(pricePerMonth);
-        server.setScore(0);
-        return server;
-    }
 
     public Long getId() {
         return id;
@@ -116,12 +40,12 @@ public class ServiceOffering {
         this.name = name;
     }
 
-    public String getProviderName() {
-        return providerName;
+    public String getProvider() {
+        return provider;
     }
 
-    public void setProviderName(String providerName) {
-        this.providerName = providerName;
+    public void setProvider(String provider) {
+        this.provider = provider;
     }
 
     public Server.Purpose getPurpose() {

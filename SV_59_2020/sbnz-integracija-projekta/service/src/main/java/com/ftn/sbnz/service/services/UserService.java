@@ -1,4 +1,4 @@
-package com.ftn.sbnz.service.auth;
+package com.ftn.sbnz.service.services;
 
 import com.ftn.sbnz.model.User;
 import com.ftn.sbnz.model.auth.Role;
@@ -13,6 +13,11 @@ import java.util.Set;
 @Service
 public class UserService {
 
+    private static final String DEFAULT_ADMIN_USERNAME = "admin";
+    private static final String DEFAULT_ADMIN_PASSWORD = "admin123";
+    private static final String DEFAULT_USER_USERNAME = "demo";
+    private static final String DEFAULT_USER_PASSWORD = "user123";
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -22,11 +27,9 @@ public class UserService {
     }
 
     @PostConstruct
-    public void ensureAdminUserExists() {
-        if (!userRepository.existsByUsername("admin")) {
-            User admin = new User("admin", passwordEncoder.encode("admin123"), Set.of(Role.ADMIN));
-            userRepository.save(admin);
-        }
+    public void ensureDefaultUsersExist() {
+        createUserIfMissing(DEFAULT_ADMIN_USERNAME, DEFAULT_ADMIN_PASSWORD, Set.of(Role.ADMIN));
+        createUserIfMissing(DEFAULT_USER_USERNAME, DEFAULT_USER_PASSWORD, Set.of(Role.USER));
     }
 
     public User registerUser(String username, String rawPassword) {
@@ -39,5 +42,13 @@ public class UserService {
 
     public Optional<User> findByUsername(String username) {
         return userRepository.findByUsername(username);
+    }
+
+    private void createUserIfMissing(String username, String rawPassword, Set<Role> roles) {
+        if (userRepository.existsByUsername(username)) {
+            return;
+        }
+        User user = new User(username, passwordEncoder.encode(rawPassword), roles);
+        userRepository.save(user);
     }
 }

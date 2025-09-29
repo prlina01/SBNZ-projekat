@@ -1,7 +1,7 @@
 package com.ftn.sbnz.service.security;
 
 import com.ftn.sbnz.model.User;
-import com.ftn.sbnz.service.auth.UserService;
+import com.ftn.sbnz.service.services.UserService;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

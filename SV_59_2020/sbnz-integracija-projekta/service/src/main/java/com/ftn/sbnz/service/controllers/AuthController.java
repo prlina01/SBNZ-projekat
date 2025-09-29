@@ -1,12 +1,12 @@
-package com.ftn.sbnz.service.api;
+package com.ftn.sbnz.service.controllers;
 
+import com.ftn.sbnz.model.User;
 import com.ftn.sbnz.model.auth.Role;
 import com.ftn.sbnz.service.api.dto.AuthResponse;
 import com.ftn.sbnz.service.api.dto.LoginRequest;
 import com.ftn.sbnz.service.api.dto.RegisterRequest;
-import com.ftn.sbnz.model.User;
-import com.ftn.sbnz.service.auth.UserService;
 import com.ftn.sbnz.service.security.JwtService;
+import com.ftn.sbnz.service.services.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -53,7 +53,7 @@ public class AuthController {
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
         );
         String username = authentication.getName();
-    User account = userService.findByUsername(username)
+        User account = userService.findByUsername(username)
                 .orElseThrow(() -> new IllegalStateException("User not found after authentication"));
         String token = jwtService.generateToken(username, account.getRoles());
         Set<String> roles = account.getRoles().stream().map(Role::name).collect(Collectors.toSet());
