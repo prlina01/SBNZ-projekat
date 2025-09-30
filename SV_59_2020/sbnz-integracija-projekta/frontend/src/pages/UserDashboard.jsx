@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ServiceCard from '../components/ServiceCard.jsx';
 import { fetchServices } from '../api/services.js';
 import { PURPOSES } from '../utils/enums.js';
@@ -9,6 +10,8 @@ const UserDashboard = () => {
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState(null);
   const [purposeFilter, setPurposeFilter] = useState('ALL');
+
+  const navigate = useNavigate();
 
   const loadServices = useCallback(async () => {
     setStatus('loading');
@@ -58,6 +61,9 @@ const UserDashboard = () => {
           </label>
           <button type="button" className="btn btn--ghost" onClick={loadServices}>
             Refresh
+          </button>
+          <button type="button" className="btn" onClick={() => navigate('/recommendations')}>
+            Get Recommendations
           </button>
         </div>
       </header>

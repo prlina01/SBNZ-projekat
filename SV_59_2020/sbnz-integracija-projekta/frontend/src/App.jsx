@@ -10,6 +10,8 @@ import AdminDashboard from './pages/AdminDashboard.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 import './App.css';
 
+import RecommendationsPage from './pages/RecommendationsPage.jsx';
+
 const App = () => {
   const { isAuthenticated, isAdmin } = useAuth();
 
@@ -49,6 +51,7 @@ const App = () => {
 
         <Route element={<ProtectedRoute allowUser /> }>
           <Route path="/dashboard" element={<UserDashboard />} />
+          <Route path="/recommendations" element={<RecommendationsPage />} />
         </Route>
         <Route element={<ProtectedRoute allowAdmin /> }>
           <Route path="/admin" element={<AdminDashboard />} />

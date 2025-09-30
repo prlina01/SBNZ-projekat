@@ -5,6 +5,11 @@ export const fetchServices = async (params = {}) => {
   return data;
 };
 
+export const fetchRecommendations = async (payload) => {
+  const { data } = await api.post('/api/services/recommendations', payload);
+  return data;
+};
+
 export const fetchServiceById = async (id) => {
   const { data } = await api.get(`/api/services/${id}`);
   return data;

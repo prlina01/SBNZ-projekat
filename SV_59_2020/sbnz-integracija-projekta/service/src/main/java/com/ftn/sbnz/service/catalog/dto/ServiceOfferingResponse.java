@@ -2,6 +2,9 @@ package com.ftn.sbnz.service.catalog.dto;
 
 import com.ftn.sbnz.model.Server;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class ServiceOfferingResponse {
 
     private Long id;
@@ -23,6 +26,9 @@ public class ServiceOfferingResponse {
     private boolean ecoFriendly;
     private double pricePerHour;
     private double pricePerMonth;
+    private double matchScore;
+    private List<String> highlights = new ArrayList<>();
+    private List<String> warnings = new ArrayList<>();
 
     public Long getId() {
         return id;
@@ -174,5 +180,29 @@ public class ServiceOfferingResponse {
 
     public void setPricePerMonth(double pricePerMonth) {
         this.pricePerMonth = pricePerMonth;
+    }
+
+    public double getMatchScore() {
+        return matchScore;
+    }
+
+    public void setMatchScore(double matchScore) {
+        this.matchScore = matchScore;
+    }
+
+    public List<String> getHighlights() {
+        return highlights;
+    }
+
+    public void setHighlights(List<String> highlights) {
+        this.highlights = highlights != null ? new ArrayList<>(highlights) : new ArrayList<>();
+    }
+
+    public List<String> getWarnings() {
+        return warnings;
+    }
+
+    public void setWarnings(List<String> warnings) {
+        this.warnings = warnings != null ? new ArrayList<>(warnings) : new ArrayList<>();
     }
 }

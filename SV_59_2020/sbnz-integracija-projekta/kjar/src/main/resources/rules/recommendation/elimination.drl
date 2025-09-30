@@ -3,11 +3,132 @@ package rules.recommendation;
 import com.ftn.sbnz.model.Server;
 import com.ftn.sbnz.model.SearchFilters;
 
-rule "Eliminate expensive servers for LOW budget"
+rule "Eliminate purpose mismatch"
     when
-        $s: Server(pricePerMonth > 90)
-        $f: SearchFilters(budget == SearchFilters.Budget.LOW)
+        SearchFilters($purpose : purpose != null)
+        $s : Server(purpose != $purpose)
     then
         retract($s);
-        System.out.println("Server " + $s.getName() + " eliminated due to LOW budget constraints.");
+end
+
+rule "Eliminate insufficient CPU"
+    when
+        SearchFilters(cpuPerformance != null, $cpu : cpuPerformance)
+        $s : Server()
+        eval($s.getCpuPerformance().ordinal() < $cpu.ordinal())
+    then
+        retract($s);
+end
+
+rule "Eliminate insufficient vCPU"
+    when
+        SearchFilters(minVcpuCount > 0, $min : minVcpuCount)
+        $s : Server(vcpuCount < $min)
+    then
+        retract($s);
+end
+
+rule "Eliminate missing GPU when required"
+    when
+        SearchFilters(gpuRequired == true)
+        $s : Server(gpuModel == Server.GpuModel.NONE)
+    then
+        retract($s);
+end
+
+rule "Eliminate low GPU memory"
+    when
+        SearchFilters(gpuRequired == true, minGpuVram > 0, $min : minGpuVram)
+        $s : Server(gpuModel != Server.GpuModel.NONE, gpuVram < $min)
+    then
+        retract($s);
+end
+
+rule "Eliminate insufficient RAM"
+    when
+        SearchFilters(minRam > 0, $min : minRam)
+        $s : Server(ram < $min)
+    then
+        retract($s);
+end
+
+rule "Eliminate insufficient storage"
+    when
+        SearchFilters(minStorageCapacity > 0, $min : minStorageCapacity)
+        $s : Server(storageCapacity < $min)
+    then
+        retract($s);
+end
+
+rule "Eliminate storage type mismatch"
+    when
+        SearchFilters(storageType != null, $type : storageType)
+        $s : Server(storageType != $type)
+    then
+        retract($s);
+end
+
+rule "Eliminate missing encryption"
+    when
+        SearchFilters(encryptedStorage == true)
+        $s : Server(encryptedStorage == false)
+    then
+        retract($s);
+end
+
+rule "Eliminate missing DDoS protection"
+    when
+        SearchFilters(ddosProtection == true)
+        $s : Server(ddosProtection == false)
+    then
+        retract($s);
+end
+
+rule "Eliminate missing high availability"
+    when
+        SearchFilters(highAvailability == true)
+        $s : Server(highAvailability == false)
+    then
+        retract($s);
+end
+
+rule "Eliminate region mismatch"
+    when
+        SearchFilters(region != null, $region : region)
+        $s : Server(region != $region)
+    then
+        retract($s);
+end
+
+rule "Eliminate insufficient bandwidth"
+    when
+        SearchFilters(minNetworkBandwidth > 0, $min : minNetworkBandwidth)
+        $s : Server(networkBandwidth < $min)
+    then
+        retract($s);
+end
+
+rule "Eliminate bandwidth for concurrent users"
+    when
+        SearchFilters(concurrentUsers > 0, $users : concurrentUsers)
+        $s : Server()
+        eval($s.getNetworkBandwidth() < ($users <= 100 ? 150 : ($users <= 500 ? 400 : 800)))
+    then
+        retract($s);
+end
+
+rule "Eliminate expensive servers for LOW budget"
+    when
+        $s : Server(pricePerMonth > 120)
+        SearchFilters(budget == SearchFilters.Budget.LOW)
+    then
+        retract($s);
+end
+
+rule "Eliminate expensive servers for MEDIUM budget"
+    when
+        $s : Server(pricePerMonth > 280)
+        SearchFilters(budget == SearchFilters.Budget.MEDIUM)
+    then
+        retract($s);
 end
