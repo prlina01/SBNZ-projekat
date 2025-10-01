@@ -6,8 +6,11 @@ const BOOLEAN_OPTIONS = [
   { value: false, label: 'No' },
 ];
 
+const purposeOptions = ['ANY', ...PURPOSES];
+const regionOptions = ['ANY', ...REGIONS];
+
 const defaultFilters = {
-  purpose: PURPOSES[0],
+  purpose: 'ANY',
   cpuPerformance: CPU_PERFORMANCE[1],
   minVcpuCount: 4,
   gpuRequired: false,
@@ -19,7 +22,7 @@ const defaultFilters = {
   minNetworkBandwidth: 100,
   ddosProtection: false,
   highAvailability: false,
-  region: REGIONS[0],
+  region: 'ANY',
   ecoPriority: false,
   concurrentUsers: 500,
   budget: 'MEDIUM',
@@ -59,6 +62,12 @@ const RecommendationForm = ({ onSubmit, loading }) => {
       concurrentUsers: Number(filters.concurrentUsers),
       rentalDuration: Number(filters.rentalDuration),
     };
+    if (filters.purpose === 'ANY') {
+      payload.purpose = null;
+    }
+    if (filters.region === 'ANY') {
+      delete payload.region;
+    }
     onSubmit(payload);
   };
 
@@ -71,8 +80,8 @@ const RecommendationForm = ({ onSubmit, loading }) => {
             <label>
               <span>Purpose</span>
               <select name="purpose" value={filters.purpose} onChange={handleChange} required>
-                {PURPOSES.map((p) => (
-                  <option key={p} value={p}>{p.replace('_', ' ')}</option>
+                {purposeOptions.map((p) => (
+                  <option key={p} value={p}>{p === 'ANY' ? 'Any purpose' : p.replace('_', ' ')}</option>
                 ))}
               </select>
             </label>
@@ -189,8 +198,8 @@ const RecommendationForm = ({ onSubmit, loading }) => {
             <label>
               <span>Region</span>
               <select name="region" value={filters.region} onChange={handleChange} required>
-                {REGIONS.map((r) => (
-                  <option key={r} value={r}>{r}</option>
+                {regionOptions.map((r) => (
+                  <option key={r} value={r}>{r === 'ANY' ? 'Any region' : r}</option>
                 ))}
               </select>
             </label>

@@ -2,7 +2,24 @@ package rules.cep;
 
 import com.ftn.sbnz.model.*;
 import java.util.Date;
+import java.lang.Math;
 
+
+function double rentalDurationDays(Rental rental) {
+    if (rental == null) {
+        return 0d;
+    }
+    Date start = rental.getStartDate();
+    if (start == null) {
+        return 0d;
+    }
+    Date end = rental.getEndDate();
+    if (end == null) {
+        end = new Date();
+    }
+    double duration = (double) (end.getTime() - start.getTime()) / (1000d * 60d * 60d * 24d);
+    return Math.max(0d, duration);
+}
 
 
 declare Rating
@@ -47,7 +64,7 @@ when
     $rent: Rental(startDate: startDate, endDate: endDate) from $rental
     
     
-    $rentalDays: Number() from ($rent.getEndDate().getTime() - $rent.getStartDate().getTime()) / (1000 * 60 * 60 * 24)
+    $rentalDays: Number() from rentalDurationDays($rent)
 
     // Determine status multiplier directly in the 'when' part
     $statusMultiplier: Number(doubleValue > 0) from

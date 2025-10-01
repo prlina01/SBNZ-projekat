@@ -3,51 +3,83 @@ package rules.recommendation;
 import com.ftn.sbnz.model.Server;
 import com.ftn.sbnz.model.SearchFilters;
 import com.ftn.sbnz.model.User;
+import com.ftn.sbnz.model.Rental;
+import com.ftn.sbnz.model.Rating;
+
+import java.util.Date;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.lang.Math;
 
-rule "Baseline score"
+declare HeavyMlTraining end
+declare EnterpriseMlProject end
+declare SmallWebTraffic end
+declare CriticalDatabase end
+declare EcoStreaming end
+
+function int requiredBandwidth(int users) {
+    if (users <= 100) {
+        return 200;
+    } else if (users <= 500) {
+        return 500;
+    }
+    return 1000;
+}
+
+function boolean withinDays(Date timestamp, int days) {
+    if (timestamp == null) {
+        return false;
+    }
+    Instant cutoff = Instant.now().minus(days, ChronoUnit.DAYS);
+    return timestamp.toInstant().isAfter(cutoff);
+}
+
+function boolean multiZoneCandidate(Server server) {
+    return server != null && server.isHighAvailability() && server.isDdosProtection();
+}
+
+rule "Seed baseline score"
     no-loop true
 when
-    SearchFilters()
     $s: Server()
 then
-    modify($s) { setScore($s.getScore() + 10) };
+    modify($s) { setScore(15) };
 end
 
-rule "Purpose match bonus"
+rule "Purpose alignment"
     no-loop true
 when
     SearchFilters($purpose : purpose != null)
-    $s : Server(purpose == $purpose)
+    $s: Server(purpose == $purpose)
 then
     modify($s) { setScore($s.getScore() + 25) };
 end
 
-rule "CPU performance meets requirement"
+rule "CPU requirement met"
     no-loop true
 when
     SearchFilters(cpuPerformance != null, $cpu : cpuPerformance)
-    $s : Server()
+    $s: Server()
     eval($s.getCpuPerformance().ordinal() >= $cpu.ordinal())
 then
     modify($s) { setScore($s.getScore() + 15) };
 end
 
-rule "CPU performance exceeds requirement"
+rule "CPU headroom bonus"
     no-loop true
 when
     SearchFilters(cpuPerformance != null, $cpu : cpuPerformance)
-    $s : Server()
+    $s: Server()
     eval($s.getCpuPerformance().ordinal() > $cpu.ordinal())
 then
     modify($s) { setScore($s.getScore() + 5) };
 end
 
-rule "vCPU headroom bonus"
+rule "vCPU capacity bonus"
     no-loop true
 when
     SearchFilters(minVcpuCount > 0, $min : minVcpuCount)
-    $s : Server(vcpuCount >= $min)
+    $s: Server(vcpuCount >= $min)
 then
     int headroom = Math.max(0, $s.getVcpuCount() - $min);
     int bonus = Math.min(12, headroom * 2);
@@ -56,248 +88,414 @@ then
     }
 end
 
-rule "GPU capability bonus"
+rule "GPU requirement satisfied"
     no-loop true
 when
     SearchFilters(gpuRequired == true, $minVram : minGpuVram)
-    $s : Server(gpuModel != Server.GpuModel.NONE)
+    $s: Server(gpuModel != Server.GpuModel.NONE, gpuVram >= $minVram)
 then
-    int vram = $s.getGpuVram();
-    if (vram >= $minVram) {
-        int bonus = 25 + Math.min(10, (vram - $minVram) / 4);
-        modify($s) { setScore($s.getScore() + bonus) };
-    package rules.recommendation;
+    int headroom = Math.max(0, $s.getGpuVram() - $minVram);
+    int bonus = 25 + Math.min(10, headroom / 4);
+    modify($s) { setScore($s.getScore() + bonus) };
+end
 
-    import com.ftn.sbnz.model.Server;
-    import com.ftn.sbnz.model.SearchFilters;
-    import com.ftn.sbnz.model.User;
+rule "Optional GPU advantage"
+    no-loop true
+when
+    SearchFilters(gpuRequired == false)
+    $s: Server(gpuModel != Server.GpuModel.NONE)
+then
+    modify($s) { setScore($s.getScore() + 6) };
+end
 
-    function int requiredBandwidth(int users) {
-        if (users <= 100) {
-            return 200;
-        } else if (users <= 500) {
-            return 500;
-        }
-        return 1000;
+rule "RAM capacity satisfied"
+    no-loop true
+when
+    SearchFilters(minRam > 0, $min : minRam)
+    $s: Server(ram >= $min)
+then
+    modify($s) { setScore($s.getScore() + 12) };
+end
+
+rule "Storage capacity satisfied"
+    no-loop true
+when
+    SearchFilters(minStorageCapacity > 0, $min : minStorageCapacity)
+    $s: Server(storageCapacity >= $min)
+then
+    modify($s) { setScore($s.getScore() + 8) };
+end
+
+rule "Preferred storage type"
+    no-loop true
+when
+    SearchFilters(storageType != null, $type : storageType)
+    $s: Server(storageType == $type)
+then
+    modify($s) { setScore($s.getScore() + 6) };
+end
+
+rule "Encrypted storage preference"
+    no-loop true
+when
+    SearchFilters(encryptedStorage == true)
+    $s: Server(encryptedStorage == true)
+then
+    modify($s) { setScore($s.getScore() + 8) };
+end
+
+rule "DDoS protection preference"
+    no-loop true
+when
+    SearchFilters(ddosProtection == true)
+    $s: Server(ddosProtection == true)
+then
+    modify($s) { setScore($s.getScore() + 7) };
+end
+
+rule "High availability preference"
+    no-loop true
+when
+    SearchFilters(highAvailability == true)
+    $s: Server(highAvailability == true)
+then
+    modify($s) { setScore($s.getScore() + 9) };
+end
+
+rule "Region alignment"
+    no-loop true
+when
+    SearchFilters(region != null, $region : region)
+    $s: Server(region == $region)
+then
+    modify($s) { setScore($s.getScore() + 12) };
+end
+
+rule "Eco priority boost"
+    no-loop true
+when
+    SearchFilters(ecoPriority == true)
+    $s: Server(ecoFriendly == true)
+then
+    modify($s) { setScore($s.getScore() + 10) };
+end
+
+rule "Network bandwidth satisfied"
+    no-loop true
+when
+    SearchFilters(minNetworkBandwidth > 0, $min : minNetworkBandwidth)
+    $s: Server(networkBandwidth >= $min)
+then
+    modify($s) { setScore($s.getScore() + 8) };
+end
+
+rule "Concurrent user throughput"
+    no-loop true
+when
+    SearchFilters(concurrentUsers > 0, $users : concurrentUsers)
+    $s: Server($bandwidth : networkBandwidth)
+    eval($bandwidth >= requiredBandwidth($users))
+then
+    modify($s) { setScore($s.getScore() + 7) };
+end
+
+rule "Budget friendly low"
+    no-loop true
+when
+    SearchFilters(budget == SearchFilters.Budget.LOW)
+    $s: Server(pricePerMonth > 0, pricePerMonth <= 100)
+then
+    modify($s) { setScore($s.getScore() + 12) };
+end
+
+rule "Budget balanced medium"
+    no-loop true
+when
+    SearchFilters(budget == SearchFilters.Budget.MEDIUM)
+    $s: Server(pricePerMonth > 0, pricePerMonth <= 220)
+then
+    modify($s) { setScore($s.getScore() + 10) };
+end
+
+rule "Budget premium high"
+    no-loop true
+when
+    SearchFilters(budget == SearchFilters.Budget.HIGH)
+    $s: Server(pricePerMonth >= 250)
+then
+    modify($s) { setScore($s.getScore() + 7) };
+end
+
+rule "Long term rental bonus"
+    no-loop true
+when
+    SearchFilters(rentalDuration >= 30)
+    $s: Server()
+then
+    modify($s) { setScore($s.getScore() + 5) };
+end
+
+rule "Enterprise rental bonus"
+    no-loop true
+when
+    SearchFilters(rentalDuration >= 180, budget == SearchFilters.Budget.HIGH)
+    $s: Server()
+then
+    modify($s) { setScore($s.getScore() + 6) };
+end
+
+rule "Short term flexibility bonus"
+    no-loop true
+when
+    SearchFilters(rentalDuration > 0, rentalDuration < 7)
+    $s: Server(pricePerHour > 0)
+then
+    modify($s) { setScore($s.getScore() + 4) };
+end
+
+rule "Status bronze discount"
+    no-loop true
+when
+    User(status == User.UserStatus.BRONZE)
+    $s: Server(pricePerMonth > 0, pricePerMonth <= 150)
+then
+    modify($s) { setScore($s.getScore() + 4) };
+end
+
+rule "Status silver discount"
+    no-loop true
+when
+    User(status == User.UserStatus.SILVER)
+    $s: Server(pricePerMonth > 0, pricePerMonth <= 240)
+then
+    modify($s) { setScore($s.getScore() + 5) };
+end
+
+rule "Status gold performance"
+    no-loop true
+when
+    User(status == User.UserStatus.GOLD)
+    $s: Server(cpuPerformance == Server.CpuPerformance.HIGH)
+then
+    modify($s) { setScore($s.getScore() + 8) };
+end
+
+rule "Scenario heavy ML training"
+    salience 5
+when
+    SearchFilters(purpose == Server.Purpose.ML_TRAINING,
+                  (minStorageCapacity >= 100 || minGpuVram >= 16 || minNetworkBandwidth >= 800))
+then
+    insertLogical(new HeavyMlTraining());
+end
+
+rule "Scenario enterprise ML project"
+    salience 4
+when
+    HeavyMlTraining()
+    SearchFilters(budget == SearchFilters.Budget.HIGH,
+                  rentalDuration >= 180,
+                  region == Server.Region.EU)
+then
+    insertLogical(new EnterpriseMlProject());
+end
+
+rule "Scenario small web traffic"
+    salience 4
+when
+    SearchFilters(purpose == Server.Purpose.WEB_APP,
+                  concurrentUsers > 0,
+                  concurrentUsers <= 200)
+then
+    insertLogical(new SmallWebTraffic());
+end
+
+rule "Scenario critical database"
+    salience 4
+when
+    SearchFilters(purpose == Server.Purpose.DATABASE, highAvailability == true)
+then
+    insertLogical(new CriticalDatabase());
+end
+
+rule "Scenario eco streaming"
+    salience 4
+when
+    SearchFilters(purpose == Server.Purpose.STREAMING, ecoPriority == true)
+then
+    insertLogical(new EcoStreaming());
+end
+
+rule "ML training infrastructure bonus"
+    no-loop true
+when
+    HeavyMlTraining()
+    $s: Server(purpose == Server.Purpose.ML_TRAINING,
+              gpuModel != Server.GpuModel.NONE,
+              storageType == Server.StorageType.NVME,
+              networkBandwidth >= 800)
+then
+    int bonus = 18;
+    if ($s.getGpuVram() >= 24) {
+        bonus += 4;
     }
+    if ($s.getStorageCapacity() >= 1000) {
+        bonus += 3;
+    }
+    modify($s) { setScore($s.getScore() + bonus) };
+end
 
-    rule "Purpose alignment"
-        no-loop true
-    when
-        $f: SearchFilters($purpose: purpose != null)
-        $s: Server(purpose == $purpose)
-    then
-        modify($s) { setScore($s.getScore() + 25) };
-    end
+rule "Enterprise ML hybrid preference"
+    no-loop true
+when
+    EnterpriseMlProject()
+    $s: Server(purpose == Server.Purpose.ML_TRAINING,
+              encryptedStorage == true,
+              highAvailability == true,
+              ddosProtection == true)
+then
+    modify($s) { setScore($s.getScore() + 12) };
+end
 
-    rule "CPU performance threshold"
-        no-loop true
-    when
-        $f: SearchFilters($cpu: cpuPerformance != null)
-        $s: Server()
-        eval($s.getCpuPerformance().ordinal() >= $cpu.ordinal())
-    then
-        modify($s) { setScore($s.getScore() + 15) };
-    end
+rule "Small web autoscaling preference"
+    no-loop true
+when
+    SmallWebTraffic()
+    $s: Server(purpose == Server.Purpose.WEB_APP,
+              vcpuCount <= 8,
+              pricePerMonth <= 180)
+then
+    modify($s) { setScore($s.getScore() + 10) };
+end
 
-    rule "CPU headroom bonus"
-        no-loop true
-    when
-        $f: SearchFilters($cpu: cpuPerformance != null)
-        $s: Server()
-        eval($s.getCpuPerformance().ordinal() > $cpu.ordinal())
-    then
-        modify($s) { setScore($s.getScore() + 5) };
-    end
+rule "Web app high availability preference"
+    no-loop true
+when
+    SearchFilters(purpose == Server.Purpose.WEB_APP, highAvailability == true)
+    $s: Server(purpose == Server.Purpose.WEB_APP,
+              highAvailability == true,
+              eval(multiZoneCandidate($s)))
+then
+    modify($s) { setScore($s.getScore() + 9) };
+end
 
-    rule "Minimum vCPU satisfied"
-        no-loop true
-    when
-        $f: SearchFilters($minVcpu: minVcpuCount > 0)
-        $s: Server(vcpuCount >= $minVcpu)
-    then
-        modify($s) { setScore($s.getScore() + 8) };
-    end
+rule "Data analytics compute focus"
+    no-loop true
+when
+    SearchFilters(purpose == Server.Purpose.DATA_ANALYTICS)
+    $s: Server(purpose == Server.Purpose.DATA_ANALYTICS,
+              vcpuCount >= 16,
+              storageType == Server.StorageType.NVME,
+              networkBandwidth >= 600)
+then
+    modify($s) { setScore($s.getScore() + 14) };
+end
 
-    rule "GPU requirement satisfied"
-        no-loop true
-    when
-        $f: SearchFilters(gpuRequired == true, $minVram: minGpuVram)
-        $s: Server(gpuModel != Server.GpuModel.NONE, gpuVram >= $minVram)
-    then
-        int headroom = Math.max(0, $s.getGpuVram() - $minVram);
-        int bonus = 22 + Math.min(6, headroom / 4);
-        modify($s) { setScore($s.getScore() + bonus) };
-    end
+rule "Critical database preference"
+    no-loop true
+when
+    CriticalDatabase()
+    $s: Server(purpose == Server.Purpose.DATABASE,
+              storageType == Server.StorageType.NVME,
+              encryptedStorage == true,
+              highAvailability == true)
+then
+    modify($s) { setScore($s.getScore() + 15) };
+end
 
-    rule "Optional GPU bonus"
-        no-loop true
-    when
-        $f: SearchFilters(gpuRequired == false)
-        $s: Server(gpuModel != Server.GpuModel.NONE)
-    then
-        modify($s) { setScore($s.getScore() + 5) };
-    end
+rule "Database replication preference"
+    no-loop true
+when
+    SearchFilters(purpose == Server.Purpose.DATABASE, highAvailability == true)
+    $s: Server(purpose == Server.Purpose.DATABASE,
+              highAvailability == true,
+              ddosProtection == true)
+then
+    modify($s) { setScore($s.getScore() + 8) };
+end
 
-    rule "RAM capacity bonus"
-        no-loop true
-    when
-        $f: SearchFilters($minRam: minRam > 0)
-        $s: Server(ram >= $minRam)
-    then
-        modify($s) { setScore($s.getScore() + 10) };
-    end
+rule "ML inference latency"
+    no-loop true
+when
+    SearchFilters(purpose == Server.Purpose.ML_INFERENCE)
+    $s: Server(purpose == Server.Purpose.ML_INFERENCE,
+              gpuModel != Server.GpuModel.NONE,
+              gpuVram >= 8,
+              networkBandwidth >= 400)
+then
+    modify($s) { setScore($s.getScore() + 13) };
+end
 
-    rule "Storage capacity bonus"
-        no-loop true
-    when
-        $f: SearchFilters($minStorage: minStorageCapacity > 0)
-        $s: Server(storageCapacity >= $minStorage)
-    then
-        modify($s) { setScore($s.getScore() + 6) };
-    end
+rule "Streaming throughput preference"
+    no-loop true
+when
+    SearchFilters(purpose == Server.Purpose.STREAMING)
+    $s: Server(purpose == Server.Purpose.STREAMING,
+              networkBandwidth >= 1000,
+              ddosProtection == true)
+then
+    modify($s) { setScore($s.getScore() + 14) };
+end
 
-    rule "Storage type match"
-        no-loop true
-    when
-        $f: SearchFilters($storageType: storageType != null)
-        $s: Server(storageType == $storageType)
-    then
-        modify($s) { setScore($s.getScore() + 5) };
-    end
+rule "Eco streaming preference"
+    no-loop true
+when
+    EcoStreaming()
+    $s: Server(purpose == Server.Purpose.STREAMING,
+              ecoFriendly == true,
+              networkBandwidth >= 800)
+then
+    modify($s) { setScore($s.getScore() + 10) };
+end
 
-    rule "Encrypted storage"
-        no-loop true
-    when
-        $f: SearchFilters(encryptedStorage == true)
-        $s: Server(encryptedStorage == true)
-    then
-        modify($s) { setScore($s.getScore() + 7) };
-    end
+rule "Provider loyalty rentals"
+    no-loop true
+when
+    $u: User()
+    Number(intValue >= 10, $total : intValue) from accumulate(
+        Rental(user == $u,
+               $start : startDate,
+               eval(withinDays($start, 365))),
+        count(1)
+    )
+    $s: Server(provider != null, $providerName : provider.name)
+    eval($providerName != null)
+    Number($providerCount : intValue) from accumulate(
+        Rental(user == $u,
+               server != null,
+               eval(server.getProvider() != null && server.getProvider().getName() != null && server.getProvider().getName().equals($providerName)),
+               $start : startDate,
+               eval(withinDays($start, 365))),
+        count(1)
+    )
+    eval($providerCount >= Math.ceil($total * 0.2))
+then
+    modify($s) { setScore($s.getScore() + 9) };
+end
 
-    rule "DDoS protection"
-        no-loop true
-    when
-        $f: SearchFilters(ddosProtection == true)
-        $s: Server(ddosProtection == true)
-    then
-        modify($s) { setScore($s.getScore() + 7) };
-    end
-
-    rule "High availability"
-        no-loop true
-    when
-        $f: SearchFilters(highAvailability == true)
-        $s: Server(highAvailability == true)
-    then
-        modify($s) { setScore($s.getScore() + 8) };
-    end
-
-    rule "Region proximity"
-        no-loop true
-    when
-        $f: SearchFilters($region: region != null)
-        $s: Server(region == $region)
-    then
-        modify($s) { setScore($s.getScore() + 10) };
-    end
-
-    rule "Eco priority"
-        no-loop true
-    when
-        $f: SearchFilters(ecoPriority == true)
-        $s: Server(ecoFriendly == true)
-    then
-        modify($s) { setScore($s.getScore() + 8) };
-    end
-
-    rule "Network bandwidth"
-        no-loop true
-    when
-        $f: SearchFilters($minBandwidth: minNetworkBandwidth > 0)
-        $s: Server(networkBandwidth >= $minBandwidth)
-    then
-        modify($s) { setScore($s.getScore() + 8) };
-    end
-
-    rule "Concurrent user capacity"
-        no-loop true
-    when
-        $f: SearchFilters($users: concurrentUsers > 0)
-        $s: Server($bandwidth: networkBandwidth)
-        eval($bandwidth >= requiredBandwidth($users))
-    then
-        modify($s) { setScore($s.getScore() + 6) };
-    end
-
-    rule "Budget low tier"
-        no-loop true
-    when
-        $f: SearchFilters(budget == SearchFilters.Budget.LOW)
-        $s: Server(pricePerMonth > 0, pricePerMonth <= 80)
-    then
-        modify($s) { setScore($s.getScore() + 12) };
-    end
-
-    rule "Budget medium tier"
-        no-loop true
-    when
-        $f: SearchFilters(budget == SearchFilters.Budget.MEDIUM)
-        $s: Server(pricePerMonth > 0, pricePerMonth <= 200)
-    then
-        modify($s) { setScore($s.getScore() + 10) };
-    end
-
-    rule "Budget premium tier"
-        no-loop true
-    when
-        $f: SearchFilters(budget == SearchFilters.Budget.HIGH)
-        $s: Server(pricePerMonth >= 250)
-    then
-        modify($s) { setScore($s.getScore() + 6) };
-    end
-
-    rule "Long rental bonus"
-        no-loop true
-    when
-        $f: SearchFilters(rentalDuration >= 30)
-        $s: Server()
-    then
-        modify($s) { setScore($s.getScore() + 5) };
-    end
-
-    rule "Short rental flexibility"
-        no-loop true
-    when
-        $f: SearchFilters(rentalDuration > 0, rentalDuration < 7)
-        $s: Server()
-    then
-        modify($s) { setScore($s.getScore() + 5) };
-    end
-
-    rule "Bronze user savings"
-        no-loop true
-    when
-        $u: User(status == User.UserStatus.BRONZE)
-        $s: Server(pricePerMonth > 0, pricePerMonth <= 120)
-    then
-        modify($s) { setScore($s.getScore() + 4) };
-    end
-
-    rule "Silver user balance"
-        no-loop true
-    when
-        $u: User(status == User.UserStatus.SILVER)
-        $s: Server(pricePerMonth > 0, pricePerMonth <= 220)
-    then
-        modify($s) { setScore($s.getScore() + 5) };
-    end
-
-    rule "Gold user performance"
-        no-loop true
-    when
-        $u: User(status == User.UserStatus.GOLD)
-        $s: Server(cpuPerformance == Server.CpuPerformance.HIGH)
-    then
-        modify($s) { setScore($s.getScore() + 8) };
-    end
+rule "Provider loyalty ratings"
+    no-loop true
+when
+    $u: User()
+    Number(intValue >= 10, $highRatings : intValue) from accumulate(
+        Rating(user == $u,
+               score >= 4,
+               $time : timestamp,
+               eval(withinDays($time, 365))),
+        count(1)
+    )
+    $s: Server(provider != null, $providerName : provider.name)
+    eval($providerName != null)
+    Number($positiveForProvider : intValue) from accumulate(
+        Rating(user == $u,
+               score >= 4,
+               server != null,
+               eval(server.getProvider() != null && server.getProvider().getName() != null && server.getProvider().getName().equals($providerName)),
+               $time : timestamp,
+               eval(withinDays($time, 365))),
+        count(1)
+    )
+    eval($positiveForProvider >= Math.ceil($highRatings * 0.2))
+then
+    modify($s) { setScore($s.getScore() + 8) };
+end
