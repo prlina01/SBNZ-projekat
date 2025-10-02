@@ -2,12 +2,15 @@ package com.ftn.sbnz.service.services.catalog;
 
 import com.ftn.sbnz.model.catalog.ServiceOffering;
 import com.ftn.sbnz.service.catalog.dto.ServiceOfferingRequest;
+import com.ftn.sbnz.service.repositories.RentalRepository;
 import com.ftn.sbnz.service.repositories.ServiceOfferingRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -15,10 +18,14 @@ public class ServiceOfferingService {
 
     private final ServiceOfferingRepository repository;
     private final ServiceUsageInspector usageInspector;
+    private final RentalRepository rentalRepository;
 
-    public ServiceOfferingService(ServiceOfferingRepository repository, ServiceUsageInspector usageInspector) {
+    public ServiceOfferingService(ServiceOfferingRepository repository,
+                                  ServiceUsageInspector usageInspector,
+                                  RentalRepository rentalRepository) {
         this.repository = repository;
         this.usageInspector = usageInspector;
+        this.rentalRepository = rentalRepository;
     }
 
     @Transactional(readOnly = true)
@@ -66,6 +73,38 @@ public class ServiceOfferingService {
             throw new IllegalStateException("Service offering is currently in use and cannot be deleted");
         }
         repository.delete(offering);
+    }
+
+    @Transactional(readOnly = true)
+    public long getActiveRentalCount(Long serviceId) {
+    return rentalRepository.countActiveRentalsForService(serviceId);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, Long> getActiveRentalCounts() {
+        return rentalRepository.countActiveRentalsPerService().stream()
+        .filter(row -> row != null && row.length >= 2 && row[0] != null && row[1] != null)
+        .collect(Collectors.toMap(
+            row -> ((Number) row[0]).longValue(),
+            row -> ((Number) row[1]).longValue(),
+            (existing, replacement) -> existing
+        ));
+    }
+
+    @Transactional(readOnly = true)
+    public Double getAverageRating(Long serviceId) {
+    return rentalRepository.findAverageRatingForService(serviceId);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, Double> getAverageRatings() {
+    return rentalRepository.findAverageRatingsPerService().stream()
+        .filter(row -> row != null && row.length >= 2 && row[0] != null && row[1] != null)
+        .collect(Collectors.toMap(
+            row -> ((Number) row[0]).longValue(),
+            row -> ((Number) row[1]).doubleValue(),
+            (existing, replacement) -> existing
+        ));
     }
 
     private void applyRequest(ServiceOffering offering, ServiceOfferingRequest request) {

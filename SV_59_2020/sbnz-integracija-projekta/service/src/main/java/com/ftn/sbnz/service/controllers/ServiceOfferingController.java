@@ -20,6 +20,7 @@ import org.springframework.security.core.Authentication;
 import javax.validation.Valid;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -41,14 +42,24 @@ public class ServiceOfferingController {
 
     @GetMapping
     public List<ServiceOfferingResponse> listAll() {
+        Map<Long, Long> activeCounts = service.getActiveRentalCounts();
+        Map<Long, Double> averageRatings = service.getAverageRatings();
         return service.findAll().stream()
-                .map(mapper::toResponse)
+                .map(offering -> {
+                    ServiceOfferingResponse response = mapper.toResponse(offering);
+                    response.setActiveRentalCount(activeCounts.getOrDefault(offering.getId(), 0L));
+                    response.setAverageRating(averageRatings.get(offering.getId()));
+                    return response;
+                })
                 .collect(Collectors.toList());
     }
 
     @GetMapping("/{id}")
     public ServiceOfferingResponse getById(@PathVariable Long id) {
-        return mapper.toResponse(service.findById(id));
+        ServiceOfferingResponse response = mapper.toResponse(service.findById(id));
+        response.setActiveRentalCount(service.getActiveRentalCount(id));
+        response.setAverageRating(service.getAverageRating(id));
+        return response;
     }
 
     @GetMapping("/featured")

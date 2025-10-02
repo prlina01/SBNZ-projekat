@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -37,27 +38,43 @@ public class ServiceOfferingAdminController {
 
     @GetMapping
     public List<ServiceOfferingResponse> listAll() {
+        Map<Long, Long> activeCounts = service.getActiveRentalCounts();
+        Map<Long, Double> averageRatings = service.getAverageRatings();
         return service.findAll().stream()
-                .map(mapper::toResponse)
+                .map(offering -> {
+                    ServiceOfferingResponse response = mapper.toResponse(offering);
+                    response.setActiveRentalCount(activeCounts.getOrDefault(offering.getId(), 0L));
+                    response.setAverageRating(averageRatings.get(offering.getId()));
+                    return response;
+                })
                 .collect(Collectors.toList());
     }
 
     @GetMapping("/{id}")
     public ServiceOfferingResponse getById(@PathVariable Long id) {
         ServiceOffering offering = service.findById(id);
-        return mapper.toResponse(offering);
+        ServiceOfferingResponse response = mapper.toResponse(offering);
+        response.setActiveRentalCount(service.getActiveRentalCount(id));
+        response.setAverageRating(service.getAverageRating(id));
+        return response;
     }
 
     @PostMapping
     public ResponseEntity<ServiceOfferingResponse> create(@Valid @RequestBody ServiceOfferingRequest request) {
         ServiceOffering created = service.create(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toResponse(created));
+        ServiceOfferingResponse response = mapper.toResponse(created);
+        response.setActiveRentalCount(service.getActiveRentalCount(response.getId()));
+        response.setAverageRating(service.getAverageRating(response.getId()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PutMapping("/{id}")
     public ServiceOfferingResponse update(@PathVariable Long id, @Valid @RequestBody ServiceOfferingRequest request) {
         ServiceOffering updated = service.update(id, request);
-        return mapper.toResponse(updated);
+        ServiceOfferingResponse response = mapper.toResponse(updated);
+        response.setActiveRentalCount(service.getActiveRentalCount(id));
+        response.setAverageRating(service.getAverageRating(id));
+        return response;
     }
 
     @DeleteMapping("/{id}")

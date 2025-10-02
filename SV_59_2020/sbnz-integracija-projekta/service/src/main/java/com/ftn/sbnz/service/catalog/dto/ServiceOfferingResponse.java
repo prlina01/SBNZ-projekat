@@ -29,6 +29,8 @@ public class ServiceOfferingResponse {
     private double matchScore;
     private List<String> highlights = new ArrayList<>();
     private List<String> warnings = new ArrayList<>();
+    private long activeRentalCount;
+    private Double averageRating;
 
     public Long getId() {
         return id;
@@ -204,5 +206,25 @@ public class ServiceOfferingResponse {
 
     public void setWarnings(List<String> warnings) {
         this.warnings = warnings != null ? new ArrayList<>(warnings) : new ArrayList<>();
+    }
+
+    public long getActiveRentalCount() {
+        return activeRentalCount;
+    }
+
+    public void setActiveRentalCount(long activeRentalCount) {
+        this.activeRentalCount = Math.max(activeRentalCount, 0);
+    }
+
+    public Double getAverageRating() {
+        return averageRating;
+    }
+
+    public void setAverageRating(Double averageRating) {
+        if (averageRating == null) {
+            this.averageRating = null;
+        } else {
+            this.averageRating = Math.max(0d, averageRating);
+        }
     }
 }

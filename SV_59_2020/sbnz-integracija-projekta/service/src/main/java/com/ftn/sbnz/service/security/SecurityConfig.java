@@ -41,6 +41,7 @@ public class SecurityConfig {
             .antMatchers(HttpMethod.GET, "/api/services/featured").permitAll()
                         .antMatchers("/api/admin/**").hasRole("ADMIN")
                         .antMatchers("/api/services/**").hasAnyRole("USER", "ADMIN")
+                        .antMatchers("/api/rentals/**").hasAnyRole("USER", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider)

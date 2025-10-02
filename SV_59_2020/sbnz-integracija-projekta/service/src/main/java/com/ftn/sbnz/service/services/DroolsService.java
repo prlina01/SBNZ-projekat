@@ -5,8 +5,6 @@ import com.ftn.sbnz.model.Rating;
 import com.ftn.sbnz.model.Rental;
 import com.ftn.sbnz.model.Server;
 import com.ftn.sbnz.model.User;
-import com.ftn.sbnz.service.dto.RatingDTO;
-import com.ftn.sbnz.service.dto.RentalDTO;
 import org.kie.api.runtime.KieSession;
 import org.kie.api.runtime.rule.FactHandle;
 import org.slf4j.Logger;
@@ -15,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Optional;
 
 @Service
@@ -28,58 +27,140 @@ public class DroolsService {
         this.kieSession = kieSession;
     }
 
-    public Rental createRental(RentalDTO rentalDTO) {
-        Optional<User> user = findFact(User.class, rentalDTO.getUserId());
-        Optional<Server> server = findFact(Server.class, rentalDTO.getServerId());
-
-        if (user.isEmpty() || server.isEmpty()) {
-            throw new IllegalArgumentException("User or Server not found for IDs provided.");
+    public void registerRental(Rental rental) {
+        if (rental == null || rental.getId() == null) {
+            throw new IllegalArgumentException("Rental must have an id before syncing with Drools");
         }
 
-        long newId = System.currentTimeMillis();
-        Rental newRental = new Rental(newId, user.get(), server.get(), new Date(), null, rentalDTO.getPurpose());
+        User userFact = ensureUserFact(rental.getUser());
+        Server serverFact = ensureServerFact(rental);
 
-        log.info("Creating and inserting new rental: {}", newRental);
-        kieSession.insert(newRental);
+        Optional<Rental> existing = findFact(Rental.class, rental.getId());
+        if (existing.isPresent()) {
+            Rental fact = existing.get();
+            fact.setStartDate(rental.getStartDate());
+            fact.setEndDate(rental.getEndDate());
+            fact.setPurpose(rental.getPurpose());
+            fact.setDurationDays(rental.getDurationDays());
+            fact.setServer(serverFact);
+            fact.setRatingScore(rental.getRatingScore());
+            fact.setRatedAt(rental.getRatedAt());
+            FactHandle handle = kieSession.getFactHandle(fact);
+            if (handle != null) {
+                kieSession.update(handle, fact);
+            }
+            log.info("Updated existing rental fact [{}] in Drools", rental.getId());
+        } else {
+            Rental fact = new Rental(rental.getId(), userFact, serverFact,
+                    rental.getStartDate(), rental.getEndDate(), rental.getPurpose(), rental.getDurationDays());
+            fact.setRatingScore(rental.getRatingScore());
+            fact.setRatedAt(rental.getRatedAt());
+            kieSession.insert(fact);
+            log.info("Inserted new rental fact [{}] into Drools", rental.getId());
+        }
 
-        kieSession.fireAllRules();
-
-        return newRental;
+        fireRulesAndDrainReports();
     }
 
-    public void addRating(RatingDTO ratingDTO) {
-        Optional<User> user = findFact(User.class, ratingDTO.getUserId());
-        Optional<Server> server = findFact(Server.class, ratingDTO.getServerId());
-        Optional<Rental> rental = findFact(Rental.class, ratingDTO.getRentalId());
+    public void registerRating(Rental rental, int score) {
+        if (rental == null || rental.getId() == null) {
+            throw new IllegalArgumentException("Rental must have an id before rating");
+        }
 
-        if (user.isPresent() && server.isPresent() && rental.isPresent()) {
-            Rental rentalToEnd = rental.get();
-            if (rentalToEnd.getEndDate() == null) {
-                rentalToEnd.setEndDate(new Date());
-                kieSession.update(kieSession.getFactHandle(rentalToEnd), rentalToEnd);
-            }
+        registerRental(rental);
 
-            Rating newRating = new Rating(
-                    System.currentTimeMillis(),
-                    user.get(),
-                    server.get(),
-                    ratingDTO.getScore(),
-                    new Date(),
-                    rentalToEnd
-            );
+        User userFact = ensureUserFact(rental.getUser());
+        Server serverFact = ensureServerFact(rental);
 
-            log.info("Inserting new rating: {}", newRating);
-            kieSession.insert(newRating);
+        Rental rentalFact = findFact(Rental.class, rental.getId())
+                .orElseThrow(() -> new IllegalStateException("Rental fact not found in Drools"));
 
-            kieSession.fireAllRules();
+        rentalFact.setEndDate(rental.getEndDate());
+        rentalFact.setRatingScore(score);
+        rentalFact.setRatedAt(rental.getRatedAt());
+        FactHandle handle = kieSession.getFactHandle(rentalFact);
+        if (handle != null) {
+            kieSession.update(handle, rentalFact);
+        }
 
-            for (FactHandle handle : kieSession.getFactHandles(obj -> obj instanceof PerformanceReport)) {
-                PerformanceReport report = (PerformanceReport) kieSession.getObject(handle);
-                log.warn("ADMIN REPORT: {}", report.getMessage());
-                kieSession.delete(handle);
-            }
+        Rating ratingFact = new Rating(
+                System.currentTimeMillis(),
+                userFact,
+                serverFact,
+                score,
+                rental.getRatedAt() != null ? rental.getRatedAt() : new Date(),
+                rentalFact
+        );
+
+        kieSession.insert(ratingFact);
+        log.info("Inserted rating for rental [{}] with score {}", rental.getId(), score);
+
+        fireRulesAndDrainReports();
+    }
+
+    private User ensureUserFact(User source) {
+        if (source == null || source.getId() == null) {
+            throw new IllegalArgumentException("Rental user is missing");
+        }
+        return findFact(User.class, source.getId())
+                .orElseGet(() -> {
+                    User fact = new User(source.getId(), source.getUsername());
+                    fact.setStatus(source.getStatus());
+                    if (source.getRoles() != null) {
+                        fact.setRoles(new HashSet<>(source.getRoles()));
+                    }
+                    kieSession.insert(fact);
+                    log.debug("Inserted user [{}] fact into Drools", source.getId());
+                    return fact;
+                });
+    }
+
+    private Server ensureServerFact(Rental rental) {
+        Long serverId = null;
+        if (rental.getServiceOffering() != null) {
+            serverId = rental.getServiceOffering().getId();
+        } else if (rental.getServer() != null) {
+            serverId = rental.getServer().getId();
+        }
+        if (serverId == null) {
+            throw new IllegalArgumentException("Rental server context is missing");
+        }
+
+        final Long id = serverId;
+        Optional<Server> existing = findFact(Server.class, id);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+
+        Server serverFact;
+        if (rental.getServiceOffering() != null) {
+            serverFact = rental.getServiceOffering().toServer();
+        } else if (rental.getServer() != null) {
+            serverFact = rental.getServer();
         } else {
-            log.error("Could not find all required facts to create a rating.");
+            throw new IllegalArgumentException("Unable to resolve server fact for rental " + rental.getId());
+        }
+
+        if (serverFact.getId() == null) {
+            serverFact.setId(id);
+        }
+
+        kieSession.insert(serverFact);
+        log.debug("Inserted server [{}] fact into Drools", id);
+        return serverFact;
+    }
+
+    private void fireRulesAndDrainReports() {
+        kieSession.fireAllRules();
+
+        for (FactHandle handle : kieSession.getFactHandles(obj -> obj instanceof PerformanceReport)) {
+            PerformanceReport report = (PerformanceReport) kieSession.getObject(handle);
+            if (report.getMessage() != null && report.getMessage().toLowerCase().contains("critically low")) {
+                log.warn("ADMIN REPORT: {}", report.getMessage());
+            } else {
+                log.info("ADMIN REPORT: {}", report.getMessage());
+            }
+            kieSession.delete(handle);
         }
     }
 

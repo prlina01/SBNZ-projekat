@@ -233,12 +233,23 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .service-card__pricing {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+}
+
+.service-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.service-card__actions .btn {
+  white-space: nowrap;
 }
 
 .service-card__price {
@@ -329,6 +340,11 @@
   font-size: 0.8rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.badge--positive {
+  background: rgba(16, 185, 129, 0.15);
+  color: rgb(4, 120, 87);
 }
 
 .auth-page {
@@ -519,6 +535,42 @@
   gap: 1.5rem;
 }
 
+.recommendations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.recommendations-list .service-card__footer {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.25rem;
+}
+
+.recommendations-list .service-card__actions {
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.recommendations-list .service-card__actions .btn {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .recommendations-list .service-card__footer {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .recommendations-list .service-card__actions {
+    width: auto;
+  }
+
+  .recommendations-list .service-card__actions .btn {
+    width: auto;
+  }
+}
+
 .auth-card__footer a {
   color: var(--color-primary);
   font-weight: 600;
@@ -531,7 +583,7 @@
 
 @media (min-width: 1024px) {
   .admin-layout {
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 3fr) minmax(0, 1.25fr);
     align-items: start;
   }
 }
@@ -541,6 +593,10 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+.admin-layout__primary .card__body {
+  padding: 2.25rem;
 }
 
 .card {
@@ -572,6 +628,68 @@
   overflow-x: auto;
 }
 
+.card__subtitle {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(71, 85, 105);
+}
+
+.status-badge--active {
+  background: rgba(59, 130, 246, 0.15);
+  color: rgb(30, 64, 175);
+}
+
+.btn--inline {
+  padding: 0.45rem 0.9rem;
+}
+
+.rental-table__service {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.rental-table__service span {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.rental-table__rate {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rental-table__rate select {
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: var(--color-surface);
+}
+
+.rental-table__row--inactive {
+  opacity: 0.85;
+}
+
 .alert {
   padding: 0.9rem 1.2rem;
   border-radius: var(--radius-md);
@@ -586,6 +704,12 @@
   color: rgb(22, 101, 52);
 }
 
+.alert--info {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: rgb(37, 99, 235);
+}
+
 .alert--error {
   background: rgba(239, 68, 68, 0.08);
   border-color: rgba(239, 68, 68, 0.3);
@@ -595,8 +719,8 @@
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.95rem;
-  min-width: 640px;
+  font-size: 0.9rem;
+  min-width: 720px;
 }
 
 .data-table th,

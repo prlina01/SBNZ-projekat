@@ -92,10 +92,19 @@ const AdminDashboard = () => {
   }, [loadServices]);
 
   const tableBody = useMemo(() => {
+    const renderAverageRating = (value) => {
+      if (value === null || value === undefined) {
+        return '—';
+      }
+
+      const rounded = Math.round(value * 10) / 10;
+      return Number.isFinite(rounded) ? rounded.toFixed(1) : '—';
+    };
+
     if (status === 'loading') {
       return (
         <tr>
-          <td colSpan={6} className="table__status">Loading services…</td>
+          <td colSpan={8} className="table__status">Loading services…</td>
         </tr>
       );
     }
@@ -103,7 +112,7 @@ const AdminDashboard = () => {
     if (status === 'error') {
       return (
         <tr>
-          <td colSpan={6} className="table__status table__status--error">
+          <td colSpan={8} className="table__status table__status--error">
             <p>{error}</p>
             <button type="button" className="btn btn--ghost" onClick={loadServices}>
               Retry
@@ -116,7 +125,7 @@ const AdminDashboard = () => {
     if (!services.length) {
       return (
         <tr>
-          <td colSpan={6} className="table__status">No services yet. Create one using the form.</td>
+          <td colSpan={8} className="table__status">No services yet. Create one using the form.</td>
         </tr>
       );
     }
@@ -128,6 +137,8 @@ const AdminDashboard = () => {
         <td>{humanizeEnum(service.purpose)}</td>
         <td>{formatCurrency(service.pricePerHour)}</td>
         <td>{formatCurrency(service.pricePerMonth)}</td>
+        <td>{service.activeRentalCount ?? 0}</td>
+        <td>{renderAverageRating(service.averageRating)}</td>
         <td className="table__actions">
           <button
             type="button"
@@ -182,6 +193,8 @@ const AdminDashboard = () => {
                     <th scope="col">Purpose</th>
                     <th scope="col">Hourly price</th>
                     <th scope="col">Monthly price</th>
+                    <th scope="col">Active rentals</th>
+                    <th scope="col">Average rating</th>
                     <th scope="col" className="table__actions">Actions</th>
                   </tr>
                 </thead>

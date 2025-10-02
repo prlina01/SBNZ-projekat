@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import { humanizeEnum, formatCurrency } from '../utils/formatters.js';
 
-const ServiceCard = ({ service }) => {
+const ServiceCard = ({ service, onRent, renting = false, disabled = false }) => {
   const {
     name,
     provider,
@@ -31,6 +31,8 @@ const ServiceCard = ({ service }) => {
   const storageLabel = [storageCapacity ? `${storageCapacity} GB` : null, humanizeEnum(storageType)].filter(Boolean).join(' ');
   const memoryLabel = ram ? `${ram} GB RAM` : 'Memory configurable';
   const regionLabel = humanizeEnum(region) || 'Global';
+
+  const canRent = typeof onRent === 'function';
 
   return (
     <article className="service-card">
@@ -68,10 +70,22 @@ const ServiceCard = ({ service }) => {
           <span className="service-card__price">{formatCurrency(hourlyPrice)} / hour</span>
           <span className="service-card__price service-card__price--muted">{formatCurrency(monthlyPrice)} / month</span>
         </div>
-        <div className="service-card__flags">
-          {highAvailability && <span className="service-card__flag">HA</span>}
-          {ecoFriendly && <span className="service-card__flag">Eco</span>}
-          {ddosProtection && <span className="service-card__flag">DDoS</span>}
+        <div className="service-card__actions">
+          <div className="service-card__flags">
+            {highAvailability && <span className="service-card__flag">HA</span>}
+            {ecoFriendly && <span className="service-card__flag">Eco</span>}
+            {ddosProtection && <span className="service-card__flag">DDoS</span>}
+          </div>
+          {canRent && (
+            <button
+              type="button"
+              className="btn btn--primary"
+              onClick={() => onRent(service)}
+              disabled={renting || disabled}
+            >
+              {renting ? 'Reserving…' : 'Rent this server'}
+            </button>
+          )}
         </div>
       </footer>
     </article>
@@ -98,6 +112,9 @@ ServiceCard.propTypes = {
     ecoFriendly: PropTypes.bool,
     ddosProtection: PropTypes.bool,
   }).isRequired,
+  onRent: PropTypes.func,
+  renting: PropTypes.bool,
+  disabled: PropTypes.bool,
 };
 
 export default ServiceCard;

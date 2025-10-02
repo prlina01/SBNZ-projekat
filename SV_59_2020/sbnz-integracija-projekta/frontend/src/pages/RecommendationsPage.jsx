@@ -1,28 +1,81 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import RecommendationForm from '../components/RecommendationForm.jsx';
 import ServiceCard from '../components/ServiceCard.jsx';
-import { fetchRecommendations } from '../api/services.js';
+import { fetchRecommendations, rentServiceOffering } from '../api/services.js';
+import { humanizeEnum } from '../utils/formatters.js';
 
 const RecommendationsPage = () => {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [lastQuery, setLastQuery] = useState(null);
+  const [rentingId, setRentingId] = useState(null);
+  const [rentFeedback, setRentFeedback] = useState(null);
+  const [rentError, setRentError] = useState(null);
 
-  const handleSubmit = async (filters) => {
+  const handleSubmit = async (payload, rawFilters) => {
     setLoading(true);
     setError(null);
+    setRentFeedback(null);
+    setRentError(null);
     setResults([]);
     setHasSearched(true);
     try {
-      const data = await fetchRecommendations(filters);
+      const data = await fetchRecommendations(payload);
       setResults(data);
+      const durationDays = Number(rawFilters?.rentalDuration ?? payload?.rentalDuration ?? 30) || 30;
+      const purposeRaw = rawFilters?.purpose ?? payload?.purpose;
+      const purpose = purposeRaw && purposeRaw !== 'ANY' ? purposeRaw : 'GENERAL_WORKLOAD';
+      setLastQuery({
+        durationDays,
+        purpose,
+      });
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to fetch recommendations.');
     } finally {
       setLoading(false);
     }
   };
+
+  const handleRent = async (service) => {
+    if (!lastQuery) {
+      setRentError('Run a recommendation search first so we know how long to reserve the server.');
+      return;
+    }
+
+    setRentError(null);
+    setRentFeedback(null);
+    setRentingId(service.id);
+
+    const durationDays = Number(lastQuery.durationDays) || 30;
+    const purposeLabel = lastQuery.purpose && lastQuery.purpose !== 'GENERAL_WORKLOAD'
+      ? lastQuery.purpose
+      : `Rental for ${service.name}`;
+
+    try {
+      await rentServiceOffering({
+        serviceOfferingId: service.id,
+        purpose: purposeLabel,
+        durationDays,
+      });
+      setRentFeedback(`Rental confirmed – ${service.name} is yours for ${durationDays} day${durationDays === 1 ? '' : 's'}.`);
+    } catch (err) {
+      setRentError(err?.response?.data?.message || 'Unable to rent this server right now.');
+    } finally {
+      setRentingId(null);
+    }
+  };
+
+  const rentContextLabel = useMemo(() => {
+    if (!lastQuery) {
+      return null;
+    }
+    const prettyPurpose = lastQuery.purpose && lastQuery.purpose !== 'GENERAL_WORKLOAD'
+      ? humanizeEnum(lastQuery.purpose)
+      : 'General workload';
+    return `Rentals will use purpose “${prettyPurpose}” for ${lastQuery.durationDays} day${lastQuery.durationDays === 1 ? '' : 's'}.`;
+  }, [lastQuery]);
 
   return (
     <div className="page recommendations-page">
@@ -44,14 +97,22 @@ const RecommendationsPage = () => {
       <RecommendationForm onSubmit={handleSubmit} loading={loading} />
 
       {error && <div className="alert alert--error" role="alert">{error}</div>}
+      {rentError && <div className="alert alert--error" role="alert">{rentError}</div>}
+      {rentFeedback && <div className="alert alert--success" role="status">{rentFeedback}</div>}
+      {rentContextLabel && <div className="alert alert--info" role="status">{rentContextLabel}</div>}
 
       <section className="recommendations-results">
         {loading && <div className="empty-state">Searching for recommendations…</div>}
 
         {!loading && results.length > 0 && (
-          <div className="services-grid">
+          <div className="recommendations-list">
             {results.map((service) => (
-              <ServiceCard key={service.id} service={service} />
+              <ServiceCard
+                key={service.id}
+                service={service}
+                onRent={handleRent}
+                renting={rentingId === service.id}
+              />
             ))}
           </div>
         )}

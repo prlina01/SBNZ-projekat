@@ -35,3 +35,18 @@ export const updateService = async (id, payload) => {
 export const deleteService = async (id) => {
   await api.delete(`/api/admin/services/${id}`);
 };
+
+export const rentServiceOffering = async (payload) => {
+  const { data } = await api.post('/api/rentals', payload);
+  return data;
+};
+
+export const fetchRentals = async () => {
+  const { data } = await api.get('/api/rentals');
+  return data;
+};
+
+export const rateRental = async (rentalId, score) => {
+  const { data } = await api.post(`/api/rentals/${rentalId}/rating`, { score });
+  return data;
+};

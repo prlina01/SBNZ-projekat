@@ -68,7 +68,7 @@ const RecommendationForm = ({ onSubmit, loading }) => {
     if (filters.region === 'ANY') {
       delete payload.region;
     }
-    onSubmit(payload);
+    onSubmit(payload, filters);
   };
 
   return (

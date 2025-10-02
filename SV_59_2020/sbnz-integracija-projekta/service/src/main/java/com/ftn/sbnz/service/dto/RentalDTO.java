@@ -1,40 +1,17 @@
 package com.ftn.sbnz.service.dto;
 
-public class RentalDTO {
-    private Long userId;
-    private Long serverId;
-    private String purpose;
+/**
+ * @deprecated Retained for backward compatibility with older API clients.
+ *             Use {@link RentRequest} instead.
+ */
+@Deprecated
+public class RentalDTO extends RentRequest {
 
     public RentalDTO() {
+        super();
     }
 
-    public RentalDTO(Long userId, Long serverId, String purpose) {
-        this.userId = userId;
-        this.serverId = serverId;
-        this.purpose = purpose;
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
-
-    public Long getServerId() {
-        return serverId;
-    }
-
-    public void setServerId(Long serverId) {
-        this.serverId = serverId;
-    }
-
-    public String getPurpose() {
-        return purpose;
-    }
-
-    public void setPurpose(String purpose) {
-        this.purpose = purpose;
+    public RentalDTO(Long serviceOfferingId, String purpose, int durationDays) {
+        super(serviceOfferingId, purpose, durationDays);
     }
 }
