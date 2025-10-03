@@ -6,6 +6,7 @@ import com.ftn.sbnz.model.User;
 import com.ftn.sbnz.model.catalog.ServiceOffering;
 import com.ftn.sbnz.service.catalog.dto.RecommendationRequest;
 import com.ftn.sbnz.service.catalog.dto.ServiceOfferingResponse;
+import com.ftn.sbnz.service.config.EliminationRuleLoader;
 import com.ftn.sbnz.service.repositories.ServiceOfferingRepository;
 import com.ftn.sbnz.service.repositories.UserRepository;
 import org.kie.api.runtime.KieContainer;
@@ -33,19 +34,23 @@ public class RecommendationService {
     private final ServiceOfferingMapper mapper;
     private final UserRepository userRepository;
     private final KieContainer kieContainer;
+    private final EliminationRuleLoader eliminationRuleLoader;
 
     public RecommendationService(ServiceOfferingRepository repository,
                                  ServiceOfferingMapper mapper,
                                  UserRepository userRepository,
-                                 KieContainer kieContainer) {
+                                 KieContainer kieContainer,
+                                 EliminationRuleLoader eliminationRuleLoader) {
         this.repository = repository;
         this.mapper = mapper;
         this.userRepository = userRepository;
         this.kieContainer = kieContainer;
+        this.eliminationRuleLoader = eliminationRuleLoader;
     }
 
     public List<ServiceOfferingResponse> recommend(RecommendationRequest request, String username) {
         SearchFilters filters = mapFilters(request);
+        eliminationRuleLoader.ensureEliminationRules(kieContainer.getKieBase("rules"));
         KieSession kieSession = kieContainer.newKieSession("k-session");
         try {
             kieSession.insert(filters);

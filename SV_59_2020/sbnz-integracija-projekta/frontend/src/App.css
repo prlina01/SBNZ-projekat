@@ -33,6 +33,26 @@
   background: rgba(79, 70, 229, 0.12);
 }
 
+.btn--inactive,
+.btn[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: auto;
+  box-shadow: none;
+}
+
+.btn--inactive:hover,
+.btn[aria-disabled='true']:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.btn--ghost.btn--inactive,
+.btn--ghost[aria-disabled='true'] {
+  border-color: rgba(79, 70, 229, 0.2);
+  background: rgba(79, 70, 229, 0.05);
+}
+
 .btn--full {
   width: 100%;
 }
@@ -802,6 +822,13 @@
 
 .btn--danger:hover {
   background: rgba(239, 68, 68, 0.2);
+}
+
+.btn--danger.btn--inactive,
+.btn--danger[aria-disabled='true'],
+.btn--danger.btn--inactive:hover,
+.btn--danger[aria-disabled='true']:hover {
+  background: rgba(239, 68, 68, 0.12);
 }
 
 .link-button {

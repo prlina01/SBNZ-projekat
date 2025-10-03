@@ -1,0 +1,23 @@
+template header
+name
+filterPattern
+serverBinding
+serverPattern
+extraCondition
+end
+
+package rules.recommendation;
+
+import com.ftn.sbnz.model.Server;
+import com.ftn.sbnz.model.SearchFilters;
+
+template "Eliminate unsuitable configuration"
+rule "Eliminate @{name}"
+when
+    @{filterPattern}
+    @{serverBinding} : @{serverPattern}
+    @{extraCondition}
+then
+    drools.delete(@{serverBinding});
+end
+end template

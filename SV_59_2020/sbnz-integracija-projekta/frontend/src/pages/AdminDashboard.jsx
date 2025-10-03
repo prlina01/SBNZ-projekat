@@ -165,7 +165,7 @@ const AdminDashboard = () => {
       setNotification({
         type: 'warning',
         message: `"${service.name}" cannot be edited while it has active rentals.`,
-        dismissAfter: 6000,
+        dismissAfter: 5000,
       });
       return;
     }
@@ -179,7 +179,7 @@ const AdminDashboard = () => {
       setNotification({
         type: 'warning',
         message: `"${service.name}" cannot be deleted while it has active rentals.`,
-        dismissAfter: 6000,
+        dismissAfter: 5000,
       });
       return;
     }
@@ -247,9 +247,8 @@ const AdminDashboard = () => {
           <td className="table__actions">
             <button
               type="button"
-              className="btn btn--ghost"
+              className={`btn btn--ghost${locked ? ' btn--inactive' : ''}`}
               onClick={() => handleEdit(service)}
-              disabled={locked}
               title={lockMessage}
               aria-disabled={locked}
             >
@@ -257,9 +256,8 @@ const AdminDashboard = () => {
             </button>
             <button
               type="button"
-              className="btn btn--danger"
+              className={`btn btn--danger${locked ? ' btn--inactive' : ''}`}
               onClick={() => handleDelete(service)}
-              disabled={locked}
               title={lockMessage}
               aria-disabled={locked}
             >

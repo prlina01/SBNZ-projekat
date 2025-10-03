@@ -1,7 +1,6 @@
 package com.ftn.sbnz.service.config;
 
 import com.ftn.sbnz.model.*;
-import org.kie.api.KieServices;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
 import org.kie.api.runtime.rule.FactHandle;
@@ -18,12 +17,19 @@ public class DroolsConfig {
 
     private static final Logger log = LoggerFactory.getLogger(DroolsConfig.class);
 
+    private final EliminationRuleLoader eliminationRuleLoader;
+
+    public DroolsConfig(EliminationRuleLoader eliminationRuleLoader) {
+        this.eliminationRuleLoader = eliminationRuleLoader;
+    }
+
     @Bean
     public KieSession kieSession(KieContainer kieContainer) {
         log.info("Initializing KieSession with complex data set...");
+        eliminationRuleLoader.ensureEliminationRules(kieContainer.getKieBase("cepKbase"));
         KieSession kieSession = kieContainer.newKieSession("cepKsession");
 
-    User user1_silver = new User(1L, "user1_silver");
+        User user1_silver = new User(1L, "user1_silver");
         user1_silver.setStatus(User.UserStatus.SILVER);
         User user2_gold = new User(2L, "user2_gold");
         user2_gold.setStatus(User.UserStatus.GOLD);
@@ -132,7 +138,7 @@ public class DroolsConfig {
     kieSession.insert(rating4);
     kieSession.insert(rating5);
     kieSession.insert(rating6);
-        log.info("KieSession initialized and complex data set inserted.");
+    log.info("KieSession initialized and complex data set inserted.");
 
         log.info("--- FIRING RULES ON INITIAL DATA SET ---");
         kieSession.fireAllRules();
@@ -188,4 +194,5 @@ public class DroolsConfig {
     private Date daysAgo(int days) {
         return new Date(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(days));
     }
+
 }
