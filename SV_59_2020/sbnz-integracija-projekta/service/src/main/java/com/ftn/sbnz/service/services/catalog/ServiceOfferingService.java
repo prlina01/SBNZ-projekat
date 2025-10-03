@@ -59,6 +59,7 @@ public class ServiceOfferingService {
     }
 
     public ServiceOffering update(Long id, ServiceOfferingRequest request) {
+        ensureNoActiveRentals(id, "updated");
         ServiceOffering offering = findById(id);
         if (repository.existsByNameIgnoreCaseAndProviderNameIgnoreCaseAndIdNot(request.getName(), request.getProvider(), id)) {
             throw new IllegalArgumentException("Service offering with the same name and provider already exists");
@@ -68,6 +69,7 @@ public class ServiceOfferingService {
     }
 
     public void delete(Long id) {
+        ensureNoActiveRentals(id, "deleted");
         ServiceOffering offering = findById(id);
         if (usageInspector.isOfferingInUse(id)) {
             throw new IllegalStateException("Service offering is currently in use and cannot be deleted");
@@ -105,6 +107,17 @@ public class ServiceOfferingService {
             row -> ((Number) row[1]).doubleValue(),
             (existing, replacement) -> existing
         ));
+    }
+
+    private void ensureNoActiveRentals(Long serviceId, String action) {
+        long activeRentals = getActiveRentalCount(serviceId);
+        if (activeRentals > 0) {
+            throw new IllegalStateException(String.format(
+                    "Service offering has %d active rentals and cannot be %s.",
+                    activeRentals,
+                    action
+            ));
+        }
     }
 
     private void applyRequest(ServiceOffering offering, ServiceOfferingRequest request) {

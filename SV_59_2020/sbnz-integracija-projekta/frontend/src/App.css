@@ -691,29 +691,64 @@
 }
 
 .alert {
-  padding: 0.9rem 1.2rem;
-  border-radius: var(--radius-md);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 1rem 1.4rem;
+  border-radius: var(--radius-lg);
   font-weight: 600;
-  border: 1px solid transparent;
-  box-shadow: var(--shadow-sm);
+  border: 2px solid transparent;
+  box-shadow: 0 18px 32px -18px rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(2px);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .alert--success {
-  background: rgba(34, 197, 94, 0.1);
-  border-color: rgba(34, 197, 94, 0.3);
-  color: rgb(22, 101, 52);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.16), rgba(16, 185, 129, 0.32));
+  border-color: rgba(16, 185, 129, 0.55);
+  color: rgb(4, 120, 87);
 }
 
 .alert--info {
-  background: rgba(59, 130, 246, 0.08);
-  border-color: rgba(59, 130, 246, 0.3);
-  color: rgb(37, 99, 235);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.14), rgba(37, 99, 235, 0.28));
+  border-color: rgba(37, 99, 235, 0.5);
+  color: rgb(29, 78, 216);
 }
 
-.alert--error {
-  background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.3);
-  color: rgb(185, 28, 28);
+.alert--warning {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.18), rgba(245, 158, 11, 0.28));
+  border-color: rgba(245, 158, 11, 0.55);
+  color: rgb(180, 83, 9);
+}
+
+.alert--error,
+.alert--danger {
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.18), rgba(220, 38, 38, 0.32));
+  border-color: rgba(220, 38, 38, 0.55);
+  color: rgb(153, 27, 27);
+}
+
+.alert--banner {
+  padding: 1.1rem 1.6rem;
+  border-width: 2px;
+  box-shadow: 0 22px 42px -20px rgba(15, 23, 42, 0.45);
+  animation: alertPulse 3s ease-in-out infinite;
+}
+
+@keyframes alertPulse {
+  0% {
+    transform: translateY(0);
+    box-shadow: 0 22px 42px -20px rgba(15, 23, 42, 0.45);
+  }
+  50% {
+    transform: translateY(-2px);
+    box-shadow: 0 26px 48px -22px rgba(15, 23, 42, 0.5);
+  }
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 22px 42px -20px rgba(15, 23, 42, 0.45);
+  }
 }
 
 .data-table {

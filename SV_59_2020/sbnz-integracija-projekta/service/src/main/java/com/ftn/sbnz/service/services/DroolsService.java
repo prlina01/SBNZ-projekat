@@ -5,6 +5,8 @@ import com.ftn.sbnz.model.Rating;
 import com.ftn.sbnz.model.Rental;
 import com.ftn.sbnz.model.Server;
 import com.ftn.sbnz.model.User;
+import com.ftn.sbnz.service.notifications.AdminNotificationMessage;
+import com.ftn.sbnz.service.notifications.AdminNotificationPublisher;
 import org.kie.api.runtime.KieSession;
 import org.kie.api.runtime.rule.FactHandle;
 import org.slf4j.Logger;
@@ -21,10 +23,12 @@ public class DroolsService {
 
     private static final Logger log = LoggerFactory.getLogger(DroolsService.class);
     private final KieSession kieSession;
+    private final AdminNotificationPublisher notificationPublisher;
 
     @Autowired
-    public DroolsService(KieSession kieSession) {
+    public DroolsService(KieSession kieSession, AdminNotificationPublisher notificationPublisher) {
         this.kieSession = kieSession;
+        this.notificationPublisher = notificationPublisher;
     }
 
     public void registerRental(Rental rental) {
@@ -155,12 +159,55 @@ public class DroolsService {
 
         for (FactHandle handle : kieSession.getFactHandles(obj -> obj instanceof PerformanceReport)) {
             PerformanceReport report = (PerformanceReport) kieSession.getObject(handle);
-            if (report.getMessage() != null && report.getMessage().toLowerCase().contains("critically low")) {
-                log.warn("ADMIN REPORT: {}", report.getMessage());
-            } else {
-                log.info("ADMIN REPORT: {}", report.getMessage());
-            }
+            dispatchAdminReport(report);
             kieSession.delete(handle);
+        }
+    }
+
+    private void dispatchAdminReport(PerformanceReport report) {
+        if (report == null) {
+            return;
+        }
+
+        String message = report.getMessage() != null ? report.getMessage() : "";
+        Server server = report.getServer();
+        String serverName = server != null && server.getName() != null ? server.getName() : "this server";
+        String providerName = null;
+        if (server != null && server.getProvider() != null && server.getProvider().getName() != null) {
+            providerName = server.getProvider().getName();
+        }
+
+        boolean negative = message.toLowerCase().contains("critically low");
+        AdminNotificationMessage.Type type = negative
+                ? AdminNotificationMessage.Type.NEGATIVE
+                : AdminNotificationMessage.Type.POSITIVE;
+
+        String actionableMessage;
+        if (negative) {
+            actionableMessage = String.format("Consider removing \"%s\" when there's 0 active rentals for it.", serverName);
+        } else {
+            String providerLabel = providerName != null ? providerName : "the provider";
+            actionableMessage = String.format("Send mail to \"%s\" for more servers with the same characteristics as \"%s\".",
+                    providerLabel,
+                    serverName);
+        }
+
+        AdminNotificationMessage payload = new AdminNotificationMessage(
+                type,
+                server != null ? server.getId() : null,
+                serverName,
+                providerName,
+                actionableMessage,
+                message,
+                System.currentTimeMillis()
+        );
+
+        notificationPublisher.publish(payload);
+
+        if (negative) {
+            log.warn("ADMIN REPORT: {}", message);
+        } else {
+            log.info("ADMIN REPORT: {}", message);
         }
     }
 
