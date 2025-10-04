@@ -24,6 +24,8 @@ public class RecommendationRequest {
     private Integer concurrentUsers;
     private SearchFilters.Budget budget;
     private Integer rentalDuration;
+    private Integer datasetSizeGb;
+    private Boolean gdprRequired;
 
     @Min(1)
     private Integer limit;
@@ -162,6 +164,22 @@ public class RecommendationRequest {
 
     public void setRentalDuration(Integer rentalDuration) {
         this.rentalDuration = rentalDuration;
+    }
+
+    public Integer getDatasetSizeGb() {
+        return datasetSizeGb;
+    }
+
+    public void setDatasetSizeGb(Integer datasetSizeGb) {
+        this.datasetSizeGb = datasetSizeGb;
+    }
+
+    public Boolean getGdprRequired() {
+        return gdprRequired;
+    }
+
+    public void setGdprRequired(Boolean gdprRequired) {
+        this.gdprRequired = gdprRequired;
     }
 
     public Integer getLimit() {

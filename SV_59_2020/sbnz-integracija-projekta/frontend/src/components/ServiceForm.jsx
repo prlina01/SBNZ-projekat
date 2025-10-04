@@ -20,6 +20,15 @@ const defaultForm = {
   highAvailability: false,
   region: REGIONS[0],
   ecoFriendly: false,
+  dedicatedCpu: false,
+  autoscalingCapable: false,
+  managedService: false,
+  replicationSupport: false,
+  multiZone: false,
+  onPremiseAvailable: false,
+  hybridDeployment: false,
+  energyEfficient: false,
+  storageIops: '0',
   pricePerHour: '5',
   pricePerMonth: '350',
 };
@@ -45,6 +54,15 @@ const mapInitialValues = (initialValues) => {
     highAvailability: Boolean(initialValues.highAvailability),
     region: initialValues.region ?? REGIONS[0],
     ecoFriendly: Boolean(initialValues.ecoFriendly),
+    dedicatedCpu: Boolean(initialValues.dedicatedCpu),
+    autoscalingCapable: Boolean(initialValues.autoscalingCapable),
+    managedService: Boolean(initialValues.managedService),
+    replicationSupport: Boolean(initialValues.replicationSupport),
+    multiZone: Boolean(initialValues.multiZone),
+    onPremiseAvailable: Boolean(initialValues.onPremiseAvailable),
+    hybridDeployment: Boolean(initialValues.hybridDeployment),
+    energyEfficient: Boolean(initialValues.energyEfficient),
+    storageIops: String(initialValues.storageIops ?? 0),
     pricePerHour: String(initialValues.pricePerHour ?? ''),
     pricePerMonth: String(initialValues.pricePerMonth ?? ''),
   };
@@ -107,6 +125,15 @@ const ServiceForm = ({ mode, initialValues, onSubmit, onCancel, isSubmitting }) 
       highAvailability: form.highAvailability,
       region: form.region,
       ecoFriendly: form.ecoFriendly,
+      dedicatedCpu: form.dedicatedCpu,
+      autoscalingCapable: form.autoscalingCapable,
+      managedService: form.managedService,
+      replicationSupport: form.replicationSupport,
+      multiZone: form.multiZone,
+      onPremiseAvailable: form.onPremiseAvailable,
+      hybridDeployment: form.hybridDeployment,
+      energyEfficient: form.energyEfficient,
+      storageIops: parseInteger(form.storageIops, 0),
       pricePerHour: parseFloatValue(form.pricePerHour, 0),
       pricePerMonth: parseFloatValue(form.pricePerMonth, 0),
     };
@@ -280,6 +307,17 @@ const ServiceForm = ({ mode, initialValues, onSubmit, onCancel, isSubmitting }) 
             ))}
           </select>
         </label>
+        <label className="form-field">
+          <span>Storage IOPS</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            name="storageIops"
+            value={form.storageIops}
+            onChange={handleNumberChange}
+            disabled={isSubmitting}
+          />
+        </label>
       </div>
 
       <div className="form-switches">
@@ -322,6 +360,86 @@ const ServiceForm = ({ mode, initialValues, onSubmit, onCancel, isSubmitting }) 
             disabled={isSubmitting}
           />
           <span>Eco-friendly</span>
+        </label>
+        <label className="switch-field">
+          <input
+            type="checkbox"
+            name="dedicatedCpu"
+            checked={form.dedicatedCpu}
+            onChange={handleCheckbox}
+            disabled={isSubmitting}
+          />
+          <span>Dedicated CPU</span>
+        </label>
+        <label className="switch-field">
+          <input
+            type="checkbox"
+            name="autoscalingCapable"
+            checked={form.autoscalingCapable}
+            onChange={handleCheckbox}
+            disabled={isSubmitting}
+          />
+          <span>Autoscaling capable</span>
+        </label>
+        <label className="switch-field">
+          <input
+            type="checkbox"
+            name="managedService"
+            checked={form.managedService}
+            onChange={handleCheckbox}
+            disabled={isSubmitting}
+          />
+          <span>Managed service</span>
+        </label>
+        <label className="switch-field">
+          <input
+            type="checkbox"
+            name="replicationSupport"
+            checked={form.replicationSupport}
+            onChange={handleCheckbox}
+            disabled={isSubmitting}
+          />
+          <span>Replication support</span>
+        </label>
+        <label className="switch-field">
+          <input
+            type="checkbox"
+            name="multiZone"
+            checked={form.multiZone}
+            onChange={handleCheckbox}
+            disabled={isSubmitting}
+          />
+          <span>Multi-zone</span>
+        </label>
+        <label className="switch-field">
+          <input
+            type="checkbox"
+            name="onPremiseAvailable"
+            checked={form.onPremiseAvailable}
+            onChange={handleCheckbox}
+            disabled={isSubmitting}
+          />
+          <span>On-premise available</span>
+        </label>
+        <label className="switch-field">
+          <input
+            type="checkbox"
+            name="hybridDeployment"
+            checked={form.hybridDeployment}
+            onChange={handleCheckbox}
+            disabled={isSubmitting}
+          />
+          <span>Hybrid deployment</span>
+        </label>
+        <label className="switch-field">
+          <input
+            type="checkbox"
+            name="energyEfficient"
+            checked={form.energyEfficient}
+            onChange={handleCheckbox}
+            disabled={isSubmitting}
+          />
+          <span>Energy efficient</span>
         </label>
       </div>
 
@@ -381,6 +499,15 @@ ServiceForm.propTypes = {
     highAvailability: PropTypes.bool,
     region: PropTypes.string,
     ecoFriendly: PropTypes.bool,
+    dedicatedCpu: PropTypes.bool,
+    autoscalingCapable: PropTypes.bool,
+    managedService: PropTypes.bool,
+    replicationSupport: PropTypes.bool,
+    multiZone: PropTypes.bool,
+    onPremiseAvailable: PropTypes.bool,
+    hybridDeployment: PropTypes.bool,
+    energyEfficient: PropTypes.bool,
+    storageIops: PropTypes.number,
     pricePerHour: PropTypes.number,
     pricePerMonth: PropTypes.number,
   }),

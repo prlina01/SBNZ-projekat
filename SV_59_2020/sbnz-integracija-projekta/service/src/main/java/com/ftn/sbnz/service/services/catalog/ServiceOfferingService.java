@@ -137,6 +137,15 @@ public class ServiceOfferingService {
         offering.setHighAvailability(request.isHighAvailability());
         offering.setRegion(request.getRegion());
         offering.setEcoFriendly(request.isEcoFriendly());
+        offering.setDedicatedCpu(request.isDedicatedCpu());
+        offering.setAutoscalingCapable(request.isAutoscalingCapable());
+        offering.setManagedService(request.isManagedService());
+        offering.setReplicationSupport(request.isReplicationSupport());
+        offering.setMultiZone(request.isMultiZone());
+        offering.setOnPremiseAvailable(request.isOnPremiseAvailable());
+        offering.setHybridDeployment(request.isHybridDeployment());
+        offering.setEnergyEfficient(request.isEnergyEfficient());
+        offering.setStorageIops(request.getStorageIops());
         offering.setPricePerHour(request.getPricePerHour());
         offering.setPricePerMonth(request.getPricePerMonth());
     }

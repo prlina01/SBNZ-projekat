@@ -39,6 +39,15 @@ public class Server {
     private boolean highAvailability;
     private Region region;
     private boolean ecoFriendly;
+    private boolean dedicatedCpu;
+    private boolean autoscalingCapable;
+    private boolean managedService;
+    private boolean replicationSupport;
+    private boolean multiZone;
+    private boolean onPremiseAvailable;
+    private boolean hybridDeployment;
+    private boolean energyEfficient;
+    private int storageIops;
     private double pricePerHour;
     private double pricePerMonth;
     private int score;
@@ -182,6 +191,78 @@ public class Server {
 
     public void setEcoFriendly(boolean ecoFriendly) {
         this.ecoFriendly = ecoFriendly;
+    }
+
+    public boolean isDedicatedCpu() {
+        return dedicatedCpu;
+    }
+
+    public void setDedicatedCpu(boolean dedicatedCpu) {
+        this.dedicatedCpu = dedicatedCpu;
+    }
+
+    public boolean isAutoscalingCapable() {
+        return autoscalingCapable;
+    }
+
+    public void setAutoscalingCapable(boolean autoscalingCapable) {
+        this.autoscalingCapable = autoscalingCapable;
+    }
+
+    public boolean isManagedService() {
+        return managedService;
+    }
+
+    public void setManagedService(boolean managedService) {
+        this.managedService = managedService;
+    }
+
+    public boolean isReplicationSupport() {
+        return replicationSupport;
+    }
+
+    public void setReplicationSupport(boolean replicationSupport) {
+        this.replicationSupport = replicationSupport;
+    }
+
+    public boolean isMultiZone() {
+        return multiZone;
+    }
+
+    public void setMultiZone(boolean multiZone) {
+        this.multiZone = multiZone;
+    }
+
+    public boolean isOnPremiseAvailable() {
+        return onPremiseAvailable;
+    }
+
+    public void setOnPremiseAvailable(boolean onPremiseAvailable) {
+        this.onPremiseAvailable = onPremiseAvailable;
+    }
+
+    public boolean isHybridDeployment() {
+        return hybridDeployment;
+    }
+
+    public void setHybridDeployment(boolean hybridDeployment) {
+        this.hybridDeployment = hybridDeployment;
+    }
+
+    public boolean isEnergyEfficient() {
+        return energyEfficient;
+    }
+
+    public void setEnergyEfficient(boolean energyEfficient) {
+        this.energyEfficient = energyEfficient;
+    }
+
+    public int getStorageIops() {
+        return storageIops;
+    }
+
+    public void setStorageIops(int storageIops) {
+        this.storageIops = storageIops;
     }
 
     public double getPricePerHour() {

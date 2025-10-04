@@ -115,6 +115,15 @@ public class RecommendationService {
             fallback.setHighAvailability(server.isHighAvailability());
             fallback.setRegion(server.getRegion());
             fallback.setEcoFriendly(server.isEcoFriendly());
+            fallback.setDedicatedCpu(server.isDedicatedCpu());
+            fallback.setAutoscalingCapable(server.isAutoscalingCapable());
+            fallback.setManagedService(server.isManagedService());
+            fallback.setReplicationSupport(server.isReplicationSupport());
+            fallback.setMultiZone(server.isMultiZone());
+            fallback.setOnPremiseAvailable(server.isOnPremiseAvailable());
+            fallback.setHybridDeployment(server.isHybridDeployment());
+            fallback.setEnergyEfficient(server.isEnergyEfficient());
+            fallback.setStorageIops(server.getStorageIops());
             fallback.setPricePerHour(server.getPricePerHour());
             fallback.setPricePerMonth(server.getPricePerMonth());
             fallback.setMatchScore(normalizedScore);
@@ -147,6 +156,8 @@ public class RecommendationService {
         filters.setConcurrentUsers(safeInt(request.getConcurrentUsers()));
         filters.setBudget(request.getBudget());
         filters.setRentalDuration(safeInt(request.getRentalDuration()));
+        filters.setDatasetSizeGb(safeInt(request.getDatasetSizeGb()));
+        filters.setGdprRequired(Boolean.TRUE.equals(request.getGdprRequired()));
         return filters;
     }
 

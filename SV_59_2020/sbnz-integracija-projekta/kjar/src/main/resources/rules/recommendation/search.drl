@@ -283,8 +283,9 @@ end
 rule "Scenario heavy ML training"
     salience 5
 when
+    // consider dataset size explicitly in addition to resource thresholds
     SearchFilters(purpose == Server.Purpose.ML_TRAINING,
-                  (minStorageCapacity >= 100 || minGpuVram >= 16 || minNetworkBandwidth >= 800))
+                  (datasetSizeGb > 100 || minStorageCapacity >= 100 || minGpuVram >= 16 || minNetworkBandwidth >= 800))
 then
     insertLogical(new HeavyMlTraining());
 end
@@ -345,16 +346,32 @@ then
     modify($s) { setScore($s.getScore() + bonus) };
 end
 
+// Additional ML bonus: prefer dedicated CPU + high network for heavy training workloads
+rule "ML heavy dedicated CPU & bandwidth bonus"
+    no-loop true
+when
+    HeavyMlTraining()
+    $s: Server(purpose == Server.Purpose.ML_TRAINING,
+              dedicatedCpu == true,
+              networkBandwidth >= 800)
+then
+    modify($s) { setScore($s.getScore() + 10) };
+end
+
 rule "Enterprise ML hybrid preference"
     no-loop true
 when
     EnterpriseMlProject()
+    // If GDPR is required by the filters, prefer providers that support on-prem or hybrid
+    SearchFilters(gdprRequired == true)
     $s: Server(purpose == Server.Purpose.ML_TRAINING,
               encryptedStorage == true,
               highAvailability == true,
               ddosProtection == true)
+    eval($s.isOnPremiseAvailable() || $s.isHybridDeployment())
 then
-    modify($s) { setScore($s.getScore() + 12) };
+    // larger boost for on-prem/hybrid-capable providers in GDPR-sensitive enterprise ML
+    modify($s) { setScore($s.getScore() + 18) };
 end
 
 rule "Small web autoscaling preference"

@@ -27,6 +27,8 @@ const defaultFilters = {
   concurrentUsers: 500,
   budget: 'MEDIUM',
   rentalDuration: 30,
+  datasetSizeGb: 0,
+  gdprRequired: false,
 };
 
 const RecommendationForm = ({ onSubmit, loading }) => {
@@ -40,7 +42,14 @@ const RecommendationForm = ({ onSubmit, loading }) => {
       parsed = value === '' ? '' : Number(value);
     }
 
-    if (name === 'gpuRequired' || name === 'encryptedStorage' || name === 'ddosProtection' || name === 'highAvailability' || name === 'ecoPriority') {
+    if (
+      name === 'gpuRequired' ||
+      name === 'encryptedStorage' ||
+      name === 'ddosProtection' ||
+      name === 'highAvailability' ||
+  name === 'ecoPriority' ||
+  name === 'gdprRequired'
+    ) {
       parsed = value === 'true';
     }
 
@@ -61,6 +70,8 @@ const RecommendationForm = ({ onSubmit, loading }) => {
       minNetworkBandwidth: Number(filters.minNetworkBandwidth),
       concurrentUsers: Number(filters.concurrentUsers),
       rentalDuration: Number(filters.rentalDuration),
+      datasetSizeGb: Number(filters.datasetSizeGb),
+      gdprRequired: Boolean(filters.gdprRequired),
     };
     if (filters.purpose === 'ANY') {
       payload.purpose = null;
@@ -77,6 +88,18 @@ const RecommendationForm = ({ onSubmit, loading }) => {
         <div className="recommendation-form__card">
           <h2>Workload profile</h2>
           <div className="recommendation-form__fields">
+                <label>
+                  <span>Dataset size (GB)</span>
+                  <input type="number" name="datasetSizeGb" value={filters.datasetSizeGb} onChange={handleChange} min="0" />
+                </label>
+                <label>
+                  <span>GDPR required</span>
+                  <select name="gdprRequired" value={String(filters.gdprRequired)} onChange={handleChange}>
+                    {BOOLEAN_OPTIONS.map((option) => (
+                      <option key={String(option.value)} value={String(option.value)}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
             <label>
               <span>Purpose</span>
               <select name="purpose" value={filters.purpose} onChange={handleChange} required>

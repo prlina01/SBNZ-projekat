@@ -36,6 +36,15 @@ public class ServiceOfferingMapper {
         response.setHighAvailability(offering.isHighAvailability());
         response.setRegion(offering.getRegion());
         response.setEcoFriendly(offering.isEcoFriendly());
+    response.setDedicatedCpu(offering.isDedicatedCpu());
+    response.setAutoscalingCapable(offering.isAutoscalingCapable());
+    response.setManagedService(offering.isManagedService());
+    response.setReplicationSupport(offering.isReplicationSupport());
+    response.setMultiZone(offering.isMultiZone());
+    response.setOnPremiseAvailable(offering.isOnPremiseAvailable());
+    response.setHybridDeployment(offering.isHybridDeployment());
+    response.setEnergyEfficient(offering.isEnergyEfficient());
+    response.setStorageIops(offering.getStorageIops());
         response.setPricePerHour(offering.getPricePerHour());
         response.setPricePerMonth(offering.getPricePerMonth());
         response.setMatchScore(matchScore);

@@ -19,6 +19,8 @@ public class SearchFilters {
     private int concurrentUsers;
     private Budget budget;
     private int rentalDuration; // in days
+    private int datasetSizeGb;
+    private boolean gdprRequired;
 
     public enum Budget {
         LOW, MEDIUM, HIGH
@@ -163,5 +165,21 @@ public class SearchFilters {
 
     public void setRentalDuration(int rentalDuration) {
         this.rentalDuration = rentalDuration;
+    }
+
+    public int getDatasetSizeGb() {
+        return datasetSizeGb;
+    }
+
+    public void setDatasetSizeGb(int datasetSizeGb) {
+        this.datasetSizeGb = Math.max(0, datasetSizeGb);
+    }
+
+    public boolean isGdprRequired() {
+        return gdprRequired;
+    }
+
+    public void setGdprRequired(boolean gdprRequired) {
+        this.gdprRequired = gdprRequired;
     }
 }
