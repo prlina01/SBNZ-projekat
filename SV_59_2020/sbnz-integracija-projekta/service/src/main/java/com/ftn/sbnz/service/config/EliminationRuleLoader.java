@@ -102,11 +102,6 @@ public class EliminationRuleLoader {
 
     private List<Map<String, Object>> buildEliminationRuleRows() {
     List<Map<String, Object>> rows = new ArrayList<>();
-    rows.add(row("purpose mismatch",
-        "SearchFilters($purpose : purpose != null)",
-        "$server",
-        "Server(purpose != $purpose)",
-        "eval(true)"));
     rows.add(row("insufficient CPU",
         "SearchFilters(cpuPerformance != null, $cpu : cpuPerformance)",
         "$server",

@@ -7,6 +7,7 @@ import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collections;
@@ -37,9 +38,11 @@ class DroolsTemplateTest {
 
         String drl = loader.compileTemplate();
 
-        System.out.println("Compiled elimination DRL:\n" + drl.replace("\r", "\\r\n"));
-        assertTrue(drl.contains("rule \"Eliminate region mismatch\""),
-                "Compiled DRL should contain region mismatch rule definition");
+		System.out.println("Compiled elimination DRL:\n" + drl.replace("\r", "\\r\n"));
+		assertTrue(drl.contains("rule \"Eliminate region mismatch\""),
+				"Compiled DRL should contain region mismatch rule definition");
+		assertFalse(drl.contains("rule \"Eliminate purpose mismatch\""),
+				"Purpose mismatch should be handled via scoring, not elimination");
     }
 
     @Test
@@ -74,5 +77,6 @@ class DroolsTemplateTest {
 
         System.out.println("Loader rows compiled DRL:\n" + drl.replace("\r", "\\r\n"));
         assertTrue(drl.contains("rule \"Eliminate region mismatch\""));
+        assertFalse(drl.contains("rule \"Eliminate purpose mismatch\""));
     }
 }

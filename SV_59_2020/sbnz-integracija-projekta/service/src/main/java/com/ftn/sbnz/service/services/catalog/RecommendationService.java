@@ -14,6 +14,8 @@ import org.kie.api.runtime.KieSession;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -94,6 +96,8 @@ public class RecommendationService {
         double normalizedScore = normalizeScore(server.getScore());
         List<String> highlights = buildHighlights(server, filters);
         List<String> warnings = buildWarnings(server, filters);
+        double baseMonthlyPrice = offering != null ? offering.getPricePerMonth() : server.getPricePerMonth();
+        double baseHourlyPrice = offering != null ? offering.getPricePerHour() : server.getPricePerHour();
         if (offering == null) {
             ServiceOfferingResponse fallback = new ServiceOfferingResponse();
             fallback.setId(server.getId());
@@ -129,9 +133,12 @@ public class RecommendationService {
             fallback.setMatchScore(normalizedScore);
             fallback.setHighlights(highlights);
             fallback.setWarnings(warnings);
+            applyDurationDiscount(fallback, baseMonthlyPrice, baseHourlyPrice, filters);
             return fallback;
         }
-        return mapper.toResponse(offering, normalizedScore, highlights, warnings);
+        ServiceOfferingResponse response = mapper.toResponse(offering, normalizedScore, highlights, warnings);
+        applyDurationDiscount(response, baseMonthlyPrice, baseHourlyPrice, filters);
+        return response;
     }
 
     private SearchFilters mapFilters(RecommendationRequest request) {
@@ -175,6 +182,53 @@ public class RecommendationService {
     private double normalizeScore(int score) {
         int bounded = Math.max(0, Math.min(score, 100));
         return bounded;
+    }
+
+    private void applyDurationDiscount(ServiceOfferingResponse response,
+                                       double baseMonthlyPrice,
+                                       double baseHourlyPrice,
+                                       SearchFilters filters) {
+        if (filters == null) {
+            return;
+        }
+        double rate = resolveDurationDiscount(filters.getRentalDuration());
+        if (rate <= 0d) {
+            return;
+        }
+        if (baseMonthlyPrice > 0) {
+            double discountedMonthly = roundCurrency(baseMonthlyPrice * (1 - rate));
+            response.setPricePerMonth(discountedMonthly);
+        }
+        if (baseHourlyPrice > 0) {
+            double discountedHourly = roundCurrency(baseHourlyPrice * (1 - rate));
+            response.setPricePerHour(discountedHourly);
+        }
+        String label = String.format(Locale.ROOT,
+                "Long-term rental discount %.0f%% applied for %d-day term",
+                rate * 100,
+                filters.getRentalDuration());
+        if (!response.getHighlights().contains(label)) {
+            response.getHighlights().add(label);
+        }
+    }
+
+    static double resolveDurationDiscount(int rentalDuration) {
+        if (rentalDuration > 180) {
+            return 0.15d;
+        }
+        if (rentalDuration > 90) {
+            return 0.10d;
+        }
+        if (rentalDuration > 30) {
+            return 0.05d;
+        }
+        return 0d;
+    }
+
+    private double roundCurrency(double value) {
+        return BigDecimal.valueOf(value)
+                .setScale(2, RoundingMode.HALF_UP)
+                .doubleValue();
     }
 
     private List<String> buildHighlights(Server server, SearchFilters filters) {
@@ -230,6 +284,9 @@ public class RecommendationService {
 
     private List<String> buildWarnings(Server server, SearchFilters filters) {
         List<String> warnings = new ArrayList<>();
+        if (filters.getPurpose() != null && server.getPurpose() != null && server.getPurpose() != filters.getPurpose()) {
+            warnings.add("Designed primarily for " + humanize(server.getPurpose()) + " workloads");
+        }
         double price = server.getPricePerMonth();
         if (filters.getBudget() == SearchFilters.Budget.LOW && price > 100) {
             warnings.add("Monthly cost may exceed low-budget expectations");

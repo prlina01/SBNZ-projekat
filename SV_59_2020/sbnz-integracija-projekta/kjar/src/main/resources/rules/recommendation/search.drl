@@ -55,6 +55,15 @@ then
     modify($s) { setScore($s.getScore() + 25) };
 end
 
+rule "Purpose mismatch penalty"
+    no-loop true
+when
+    SearchFilters($purpose : purpose != null)
+    $s: Server(purpose != $purpose)
+then
+    modify($s) { setScore($s.getScore() - 18) };
+end
+
 rule "CPU requirement met"
     no-loop true
 when
@@ -198,6 +207,7 @@ when
 then
     modify($s) { setScore($s.getScore() + 7) };
 end
+
 
 rule "Budget friendly low"
     no-loop true
@@ -380,7 +390,8 @@ when
     SmallWebTraffic()
     $s: Server(purpose == Server.Purpose.WEB_APP,
               vcpuCount <= 8,
-              pricePerMonth <= 180)
+              pricePerMonth <= 180,
+              autoscalingCapable == true)
 then
     modify($s) { setScore($s.getScore() + 10) };
 end
@@ -415,9 +426,22 @@ when
     $s: Server(purpose == Server.Purpose.DATABASE,
               storageType == Server.StorageType.NVME,
               encryptedStorage == true,
-              highAvailability == true)
+              highAvailability == true,
+              managedService == true,
+              replicationSupport == true,
+              storageIops >= 800)
 then
     modify($s) { setScore($s.getScore() + 15) };
+end
+
+rule "Critical database multi-zone preference"
+    no-loop true
+when
+    CriticalDatabase()
+    $s: Server(purpose == Server.Purpose.DATABASE,
+              multiZone == true)
+then
+    modify($s) { setScore($s.getScore() + 7) };
 end
 
 rule "Database replication preference"
@@ -460,6 +484,7 @@ when
     EcoStreaming()
     $s: Server(purpose == Server.Purpose.STREAMING,
               ecoFriendly == true,
+              energyEfficient == true,
               networkBandwidth >= 800)
 then
     modify($s) { setScore($s.getScore() + 10) };

@@ -549,6 +549,26 @@
   justify-content: flex-end;
 }
 
+.recommendation-form__toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+}
+
+@media (min-width: 768px) {
+  .recommendation-form__toggle {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+  }
+}
+
+.recommendation-form__toggle-note {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
 .recommendations-results {
   display: flex;
   flex-direction: column;
