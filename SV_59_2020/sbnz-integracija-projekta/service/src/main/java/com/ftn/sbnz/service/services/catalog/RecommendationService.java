@@ -14,8 +14,6 @@ import org.kie.api.runtime.KieSession;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -64,6 +62,15 @@ public class RecommendationService {
             for (ServiceOffering offering : offerings) {
                 Server serverFact = offering.toServer();
                 serverFact.setScore(0);
+                if (serverFact.getBasePricePerMonth() <= 0 && serverFact.getPricePerMonth() > 0) {
+                    serverFact.setBasePricePerMonth(serverFact.getPricePerMonth());
+                }
+                if (serverFact.getBasePricePerHour() <= 0 && serverFact.getPricePerHour() > 0) {
+                    serverFact.setBasePricePerHour(serverFact.getPricePerHour());
+                }
+                if (serverFact.getRuleHighlights() == null) {
+                    serverFact.setRuleHighlights(new ArrayList<>());
+                }
                 kieSession.insert(serverFact);
                 offeringsById.put(serverFact.getId(), offering);
             }
@@ -95,9 +102,16 @@ public class RecommendationService {
                                                   SearchFilters filters) {
         double normalizedScore = normalizeScore(server.getScore());
         List<String> highlights = buildHighlights(server, filters);
+        if (server.getRuleHighlights() != null) {
+            for (String ruleHighlight : server.getRuleHighlights()) {
+                if (!highlights.contains(ruleHighlight)) {
+                    highlights.add(ruleHighlight);
+                }
+            }
+        }
         List<String> warnings = buildWarnings(server, filters);
-        double baseMonthlyPrice = offering != null ? offering.getPricePerMonth() : server.getPricePerMonth();
-        double baseHourlyPrice = offering != null ? offering.getPricePerHour() : server.getPricePerHour();
+        double finalMonthlyPrice = server.getPricePerMonth() > 0 ? server.getPricePerMonth() : 0d;
+        double finalHourlyPrice = server.getPricePerHour() > 0 ? server.getPricePerHour() : 0d;
         if (offering == null) {
             ServiceOfferingResponse fallback = new ServiceOfferingResponse();
             fallback.setId(server.getId());
@@ -128,16 +142,24 @@ public class RecommendationService {
             fallback.setHybridDeployment(server.isHybridDeployment());
             fallback.setEnergyEfficient(server.isEnergyEfficient());
             fallback.setStorageIops(server.getStorageIops());
-            fallback.setPricePerHour(server.getPricePerHour());
-            fallback.setPricePerMonth(server.getPricePerMonth());
+            if (finalHourlyPrice > 0) {
+                fallback.setPricePerHour(finalHourlyPrice);
+            }
+            if (finalMonthlyPrice > 0) {
+                fallback.setPricePerMonth(finalMonthlyPrice);
+            }
             fallback.setMatchScore(normalizedScore);
             fallback.setHighlights(highlights);
             fallback.setWarnings(warnings);
-            applyDurationDiscount(fallback, baseMonthlyPrice, baseHourlyPrice, filters);
             return fallback;
         }
         ServiceOfferingResponse response = mapper.toResponse(offering, normalizedScore, highlights, warnings);
-        applyDurationDiscount(response, baseMonthlyPrice, baseHourlyPrice, filters);
+        if (finalHourlyPrice > 0) {
+            response.setPricePerHour(finalHourlyPrice);
+        }
+        if (finalMonthlyPrice > 0) {
+            response.setPricePerMonth(finalMonthlyPrice);
+        }
         return response;
     }
 
@@ -182,53 +204,6 @@ public class RecommendationService {
     private double normalizeScore(int score) {
         int bounded = Math.max(0, Math.min(score, 100));
         return bounded;
-    }
-
-    private void applyDurationDiscount(ServiceOfferingResponse response,
-                                       double baseMonthlyPrice,
-                                       double baseHourlyPrice,
-                                       SearchFilters filters) {
-        if (filters == null) {
-            return;
-        }
-        double rate = resolveDurationDiscount(filters.getRentalDuration());
-        if (rate <= 0d) {
-            return;
-        }
-        if (baseMonthlyPrice > 0) {
-            double discountedMonthly = roundCurrency(baseMonthlyPrice * (1 - rate));
-            response.setPricePerMonth(discountedMonthly);
-        }
-        if (baseHourlyPrice > 0) {
-            double discountedHourly = roundCurrency(baseHourlyPrice * (1 - rate));
-            response.setPricePerHour(discountedHourly);
-        }
-        String label = String.format(Locale.ROOT,
-                "Long-term rental discount %.0f%% applied for %d-day term",
-                rate * 100,
-                filters.getRentalDuration());
-        if (!response.getHighlights().contains(label)) {
-            response.getHighlights().add(label);
-        }
-    }
-
-    static double resolveDurationDiscount(int rentalDuration) {
-        if (rentalDuration > 180) {
-            return 0.15d;
-        }
-        if (rentalDuration > 90) {
-            return 0.10d;
-        }
-        if (rentalDuration > 30) {
-            return 0.05d;
-        }
-        return 0d;
-    }
-
-    private double roundCurrency(double value) {
-        return BigDecimal.valueOf(value)
-                .setScale(2, RoundingMode.HALF_UP)
-                .doubleValue();
     }
 
     private List<String> buildHighlights(Server server, SearchFilters filters) {

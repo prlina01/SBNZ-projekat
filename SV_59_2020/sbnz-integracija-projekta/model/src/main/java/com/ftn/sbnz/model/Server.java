@@ -1,5 +1,8 @@
 package com.ftn.sbnz.model;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Server {
 
     public enum Purpose {
@@ -50,6 +53,10 @@ public class Server {
     private int storageIops;
     private double pricePerHour;
     private double pricePerMonth;
+    private double basePricePerHour;
+    private double basePricePerMonth;
+    private Double appliedDiscountRate;
+    private List<String> ruleHighlights = new ArrayList<>();
     private int score;
 
     public Server() {
@@ -279,6 +286,54 @@ public class Server {
 
     public void setPricePerMonth(double pricePerMonth) {
         this.pricePerMonth = pricePerMonth;
+    }
+
+    public double getBasePricePerHour() {
+        return basePricePerHour;
+    }
+
+    public void setBasePricePerHour(double basePricePerHour) {
+        this.basePricePerHour = basePricePerHour;
+    }
+
+    public double getBasePricePerMonth() {
+        return basePricePerMonth;
+    }
+
+    public void setBasePricePerMonth(double basePricePerMonth) {
+        this.basePricePerMonth = basePricePerMonth;
+    }
+
+    public Double getAppliedDiscountRate() {
+        return appliedDiscountRate;
+    }
+
+    public void setAppliedDiscountRate(Double appliedDiscountRate) {
+        this.appliedDiscountRate = appliedDiscountRate;
+    }
+
+    public List<String> getRuleHighlights() {
+        return ruleHighlights;
+    }
+
+    public void setRuleHighlights(List<String> ruleHighlights) {
+        if (ruleHighlights == null) {
+            this.ruleHighlights = new ArrayList<>();
+        } else {
+            this.ruleHighlights = new ArrayList<>(ruleHighlights);
+        }
+    }
+
+    public void addRuleHighlight(String highlight) {
+        if (highlight == null || highlight.isBlank()) {
+            return;
+        }
+        if (this.ruleHighlights == null) {
+            this.ruleHighlights = new ArrayList<>();
+        }
+        if (!this.ruleHighlights.contains(highlight)) {
+            this.ruleHighlights.add(highlight);
+        }
     }
 
     public int getScore() {

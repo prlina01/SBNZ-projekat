@@ -114,6 +114,10 @@ public class ServiceOffering {
         server.setStorageIops(storageIops);
         server.setPricePerHour(pricePerHour);
         server.setPricePerMonth(pricePerMonth);
+        server.setBasePricePerHour(pricePerHour);
+        server.setBasePricePerMonth(pricePerMonth);
+        server.setAppliedDiscountRate(null);
+        server.setRuleHighlights(null);
         server.setScore(0);
         return server;
     }

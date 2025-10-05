@@ -6,7 +6,10 @@ import com.ftn.sbnz.model.User;
 import com.ftn.sbnz.model.Rental;
 import com.ftn.sbnz.model.Rating;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Date;
+import java.util.Locale;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.lang.Math;
@@ -36,6 +39,25 @@ function boolean withinDays(Date timestamp, int days) {
 
 function boolean multiZoneCandidate(Server server) {
     return server != null && server.isHighAvailability() && server.isDdosProtection();
+}
+
+function double resolveDurationDiscount(int rentalDuration) {
+    if (rentalDuration > 180) {
+        return 0.15d;
+    }
+    if (rentalDuration > 90) {
+        return 0.10d;
+    }
+    if (rentalDuration > 30) {
+        return 0.05d;
+    }
+    return 0d;
+}
+
+function double roundCurrency(double value) {
+    return BigDecimal.valueOf(value)
+            .setScale(2, RoundingMode.HALF_UP)
+            .doubleValue();
 }
 
 rule "Seed baseline score"
@@ -243,6 +265,30 @@ when
     $s: Server()
 then
     modify($s) { setScore($s.getScore() + 5) };
+end
+
+rule "Apply rental duration discount"
+    no-loop true
+when
+    SearchFilters($duration : rentalDuration)
+    eval($duration > 30)
+    $s: Server()
+    eval(resolveDurationDiscount($duration) > 0d)
+then
+    double rate = resolveDurationDiscount($duration);
+    double baseMonthly = $s.getBasePricePerMonth();
+    double baseHourly = $s.getBasePricePerHour();
+    double newMonthly = baseMonthly > 0 ? roundCurrency(baseMonthly * (1 - rate)) : $s.getPricePerMonth();
+    double newHourly = baseHourly > 0 ? roundCurrency(baseHourly * (1 - rate)) : $s.getPricePerHour();
+    $s.setPricePerMonth(newMonthly);
+    $s.setPricePerHour(newHourly);
+    $s.setAppliedDiscountRate(rate);
+    update($s);
+    String label = String.format(Locale.ROOT,
+            "Long-term rental discount %.0f%% applied for %d-day term",
+            rate * 100,
+            $duration);
+    $s.addRuleHighlight(label);
 end
 
 rule "Enterprise rental bonus"
