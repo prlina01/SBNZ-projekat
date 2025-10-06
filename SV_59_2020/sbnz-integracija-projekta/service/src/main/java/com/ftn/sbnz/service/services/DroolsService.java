@@ -7,6 +7,7 @@ import com.ftn.sbnz.model.Server;
 import com.ftn.sbnz.model.User;
 import com.ftn.sbnz.service.notifications.AdminNotificationMessage;
 import com.ftn.sbnz.service.notifications.AdminNotificationPublisher;
+import com.ftn.sbnz.service.repositories.UserRepository;
 import org.kie.api.runtime.KieSession;
 import org.kie.api.runtime.rule.FactHandle;
 import org.slf4j.Logger;
@@ -14,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Optional;
@@ -24,11 +26,15 @@ public class DroolsService {
     private static final Logger log = LoggerFactory.getLogger(DroolsService.class);
     private final KieSession kieSession;
     private final AdminNotificationPublisher notificationPublisher;
+    private final UserRepository userRepository;
 
     @Autowired
-    public DroolsService(KieSession kieSession, AdminNotificationPublisher notificationPublisher) {
+    public DroolsService(KieSession kieSession,
+                         AdminNotificationPublisher notificationPublisher,
+                         UserRepository userRepository) {
         this.kieSession = kieSession;
         this.notificationPublisher = notificationPublisher;
+        this.userRepository = userRepository;
     }
 
     public void registerRental(Rental rental) {
@@ -63,7 +69,7 @@ public class DroolsService {
             log.info("Inserted new rental fact [{}] into Drools", rental.getId());
         }
 
-        fireRulesAndDrainReports();
+    fireRulesAndDrainReports();
     }
 
     public void registerRating(Rental rental, int score) {
@@ -106,17 +112,39 @@ public class DroolsService {
         if (source == null || source.getId() == null) {
             throw new IllegalArgumentException("Rental user is missing");
         }
-        return findFact(User.class, source.getId())
-                .orElseGet(() -> {
-                    User fact = new User(source.getId(), source.getUsername());
-                    fact.setStatus(source.getStatus());
-                    if (source.getRoles() != null) {
-                        fact.setRoles(new HashSet<>(source.getRoles()));
-                    }
-                    kieSession.insert(fact);
-                    log.debug("Inserted user [{}] fact into Drools", source.getId());
-                    return fact;
-                });
+        Optional<User> existing = findFact(User.class, source.getId());
+        if (existing.isEmpty()) {
+            User fact = new User(source.getId(), source.getUsername());
+            fact.setStatus(source.getStatus());
+            if (source.getRoles() != null) {
+                fact.setRoles(new HashSet<>(source.getRoles()));
+            }
+            kieSession.insert(fact);
+            log.debug("Inserted user [{}] fact into Drools", source.getId());
+            return fact;
+        }
+
+        User fact = existing.get();
+        boolean usernameMismatch = source.getUsername() != null && !source.getUsername().equals(fact.getUsername());
+
+        if (usernameMismatch) {
+            purgeFactsForUser(fact);
+            fact.setUsername(source.getUsername());
+        }
+
+        fact.setStatus(source.getStatus());
+        if (source.getRoles() != null) {
+            fact.setRoles(new HashSet<>(source.getRoles()));
+        } else {
+            fact.setRoles(Collections.emptySet());
+        }
+
+        FactHandle handle = kieSession.getFactHandle(fact);
+        if (handle != null) {
+            kieSession.update(handle, fact);
+        }
+
+        return fact;
     }
 
     private Server ensureServerFact(Rental rental) {
@@ -157,11 +185,48 @@ public class DroolsService {
     private void fireRulesAndDrainReports() {
         kieSession.fireAllRules();
 
+        synchronizeUserStatuses();
+
         for (FactHandle handle : kieSession.getFactHandles(obj -> obj instanceof PerformanceReport)) {
             PerformanceReport report = (PerformanceReport) kieSession.getObject(handle);
             dispatchAdminReport(report);
             kieSession.delete(handle);
         }
+    }
+    private void synchronizeUserStatuses() {
+        kieSession.getObjects(obj -> obj instanceof User).stream()
+                .map(User.class::cast)
+                .filter(user -> user.getId() != null && user.getStatus() != null)
+                .forEach(userFact -> userRepository.findById(userFact.getId()).ifPresent(entity -> {
+                    if (entity.getStatus() != userFact.getStatus()) {
+                        entity.setStatus(userFact.getStatus());
+                        userRepository.save(entity);
+                        log.info("Persisted status [{}] for user [{}]", userFact.getStatus(), userFact.getId());
+                    }
+                }));
+    }
+
+    private void purgeFactsForUser(User userFact) {
+        Long userId = userFact.getId();
+        if (userId == null) {
+            return;
+        }
+
+        for (FactHandle handle : kieSession.getFactHandles(obj -> obj instanceof Rental && belongsToUser((Rental) obj, userId))) {
+            kieSession.delete(handle);
+        }
+
+        for (FactHandle handle : kieSession.getFactHandles(obj -> obj instanceof Rating && belongsToUser((Rating) obj, userId))) {
+            kieSession.delete(handle);
+        }
+    }
+
+    private boolean belongsToUser(Rental rental, Long userId) {
+        return rental != null && rental.getUser() != null && userId.equals(rental.getUser().getId());
+    }
+
+    private boolean belongsToUser(Rating rating, Long userId) {
+        return rating != null && rating.getUser() != null && userId.equals(rating.getUser().getId());
     }
 
     private void dispatchAdminReport(PerformanceReport report) {

@@ -1,10 +1,20 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
+import { formatUserStatus } from '../utils/formatters.js';
 import './Navbar.css';
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, isAdmin, logout, username } = useAuth();
+  const {
+    isAuthenticated,
+    isAdmin,
+    isUser,
+    logout,
+    username,
+    userStatus,
+  } = useAuth();
+
+  const statusLabel = formatUserStatus(userStatus);
 
   const handleLogout = () => {
     logout();
@@ -45,6 +55,11 @@ const Navbar = () => {
           <button type="button" className="navbar__logout" onClick={handleLogout}>
             Logout {username ? `(${username})` : ''}
           </button>
+        )}
+        {isAuthenticated && isUser && (
+          <span className={`navbar__status navbar__status--${(userStatus ?? 'NONE').toLowerCase()}`}>
+            Status: {statusLabel}
+          </span>
         )}
       </nav>
     </header>

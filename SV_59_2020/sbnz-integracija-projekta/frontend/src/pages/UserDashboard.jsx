@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchRentals, rateRental } from '../api/services.js';
 import { humanizeEnum } from '../utils/formatters.js';
+import useAuth from '../hooks/useAuth';
 
 const ratingScale = [5, 4, 3, 2, 1];
 
@@ -26,6 +27,7 @@ const UserDashboard = () => {
   const [ratingFeedback, setRatingFeedback] = useState(null);
 
   const navigate = useNavigate();
+  const { refreshProfile } = useAuth();
 
   const rentalLabel = (rental) => `${rental.serviceName} (${rental.providerName})`;
 
@@ -38,6 +40,9 @@ const UserDashboard = () => {
       const data = await fetchRentals();
       setRentals(data);
       setStatus('success');
+      refreshProfile().catch((error) => {
+        console.warn('Failed to refresh profile after loading rentals', error);
+      });
     } catch (err) {
       const message = err?.response?.data?.message || 'Unable to load your rentals right now.';
       setError(message);
@@ -67,6 +72,9 @@ const UserDashboard = () => {
       const updated = await rateRental(rental.id, draft);
       setRentals((prev) => prev.map((item) => (item.id === rental.id ? updated : item)));
   setRatingFeedback(`Thanks! You rated ${rentalLabel(rental)} with ${draft}/5.`);
+      refreshProfile().catch((error) => {
+        console.warn('Failed to refresh profile after rating rental', error);
+      });
     } catch (err) {
       const message = err?.response?.data?.message || 'Unable to submit rating right now.';
       setRatingError(message);

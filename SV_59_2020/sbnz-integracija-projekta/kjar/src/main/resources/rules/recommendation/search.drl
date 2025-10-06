@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Date;
 import java.util.Locale;
+import java.util.List;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.lang.Math;
@@ -57,6 +58,19 @@ function double resolveDurationDiscount(int rentalDuration) {
 function double roundCurrency(double value) {
     return BigDecimal.valueOf(value)
             .setScale(2, RoundingMode.HALF_UP)
+            .doubleValue();
+}
+
+function double combineDiscountRates(double currentRate, double additionalRate) {
+    double safeCurrent = Math.max(0d, Math.min(0.9d, currentRate));
+    double safeAdditional = Math.max(0d, Math.min(0.9d, additionalRate));
+    double combined = 1d - ((1d - safeCurrent) * (1d - safeAdditional));
+    return Math.max(0d, Math.min(0.8d, combined));
+}
+
+function double normalizeDiscountRate(double rate) {
+    return BigDecimal.valueOf(rate)
+            .setScale(6, RoundingMode.HALF_UP)
             .doubleValue();
 }
 
@@ -278,17 +292,26 @@ then
     double rate = resolveDurationDiscount($duration);
     double baseMonthly = $s.getBasePricePerMonth();
     double baseHourly = $s.getBasePricePerHour();
-    double newMonthly = baseMonthly > 0 ? roundCurrency(baseMonthly * (1 - rate)) : $s.getPricePerMonth();
-    double newHourly = baseHourly > 0 ? roundCurrency(baseHourly * (1 - rate)) : $s.getPricePerHour();
-    $s.setPricePerMonth(newMonthly);
-    $s.setPricePerHour(newHourly);
-    $s.setAppliedDiscountRate(rate);
-    update($s);
     String label = String.format(Locale.ROOT,
             "Long-term rental discount %.0f%% applied for %d-day term",
             rate * 100,
             $duration);
+    List<String> highlights = $s.getRuleHighlights();
+    if (highlights != null && highlights.contains(label)) {
+        return;
+    }
+
+    double currentRate = $s.getAppliedDiscountRate() != null ? $s.getAppliedDiscountRate() : 0d;
+    double combinedRate = currentRate > 0d ? combineDiscountRates(currentRate, rate) : rate;
+    double normalizedRate = normalizeDiscountRate(combinedRate);
+    double newMonthly = baseMonthly > 0 ? roundCurrency(baseMonthly * (1 - normalizedRate)) : $s.getPricePerMonth();
+    double newHourly = baseHourly > 0 ? roundCurrency(baseHourly * (1 - normalizedRate)) : $s.getPricePerHour();
+
+    $s.setPricePerMonth(newMonthly);
+    $s.setPricePerHour(newHourly);
+    $s.setAppliedDiscountRate(normalizedRate);
     $s.addRuleHighlight(label);
+    update($s);
 end
 
 rule "Enterprise rental bonus"
@@ -313,18 +336,87 @@ rule "Status bronze discount"
     no-loop true
 when
     User(status == User.UserStatus.BRONZE)
-    $s: Server(pricePerMonth > 0, pricePerMonth <= 150)
+    $s: Server(pricePerMonth > 0 || pricePerHour > 0)
 then
-    modify($s) { setScore($s.getScore() + 4) };
+    double statusRate = 0.05d;
+    double baseMonthly = $s.getBasePricePerMonth() > 0 ? $s.getBasePricePerMonth() : $s.getPricePerMonth();
+    double baseHourly = $s.getBasePricePerHour() > 0 ? $s.getBasePricePerHour() : $s.getPricePerHour();
+    double currentRate = $s.getAppliedDiscountRate() != null ? $s.getAppliedDiscountRate() : 0d;
+    double combinedRate = currentRate > 0d ? combineDiscountRates(currentRate, statusRate) : statusRate;
+    double normalizedRate = normalizeDiscountRate(combinedRate);
+    double newMonthly = baseMonthly > 0 ? roundCurrency(baseMonthly * (1 - normalizedRate)) : $s.getPricePerMonth();
+    double newHourly = baseHourly > 0 ? roundCurrency(baseHourly * (1 - normalizedRate)) : $s.getPricePerHour();
+    int updatedScore = $s.getScore() + 4;
+    String label = "Loyalty discount 5% for Bronze status";
+    List<String> highlights = $s.getRuleHighlights();
+    if (highlights != null && highlights.contains(label)) {
+        return;
+    }
+
+    $s.setPricePerMonth(newMonthly);
+    $s.setPricePerHour(newHourly);
+    $s.setAppliedDiscountRate(normalizedRate);
+    $s.addRuleHighlight(label);
+    $s.setScore(updatedScore);
+    update($s);
 end
 
 rule "Status silver discount"
     no-loop true
 when
     User(status == User.UserStatus.SILVER)
-    $s: Server(pricePerMonth > 0, pricePerMonth <= 240)
+    $s: Server(pricePerMonth > 0 || pricePerHour > 0)
 then
-    modify($s) { setScore($s.getScore() + 5) };
+    double statusRate = 0.10d;
+    double baseMonthly = $s.getBasePricePerMonth() > 0 ? $s.getBasePricePerMonth() : $s.getPricePerMonth();
+    double baseHourly = $s.getBasePricePerHour() > 0 ? $s.getBasePricePerHour() : $s.getPricePerHour();
+    double currentRate = $s.getAppliedDiscountRate() != null ? $s.getAppliedDiscountRate() : 0d;
+    double combinedRate = currentRate > 0d ? combineDiscountRates(currentRate, statusRate) : statusRate;
+    double normalizedRate = normalizeDiscountRate(combinedRate);
+    double newMonthly = baseMonthly > 0 ? roundCurrency(baseMonthly * (1 - normalizedRate)) : $s.getPricePerMonth();
+    double newHourly = baseHourly > 0 ? roundCurrency(baseHourly * (1 - normalizedRate)) : $s.getPricePerHour();
+    int updatedScore = $s.getScore() + 5;
+    String label = "Loyalty discount 10% for Silver status";
+    List<String> highlights = $s.getRuleHighlights();
+    if (highlights != null && highlights.contains(label)) {
+        return;
+    }
+
+    $s.setPricePerMonth(newMonthly);
+    $s.setPricePerHour(newHourly);
+    $s.setAppliedDiscountRate(normalizedRate);
+    $s.addRuleHighlight(label);
+    $s.setScore(updatedScore);
+    update($s);
+end
+
+rule "Status gold discount"
+    no-loop true
+when
+    User(status == User.UserStatus.GOLD)
+    $s: Server(pricePerMonth > 0 || pricePerHour > 0)
+then
+    double statusRate = 0.15d;
+    double baseMonthly = $s.getBasePricePerMonth() > 0 ? $s.getBasePricePerMonth() : $s.getPricePerMonth();
+    double baseHourly = $s.getBasePricePerHour() > 0 ? $s.getBasePricePerHour() : $s.getPricePerHour();
+    double currentRate = $s.getAppliedDiscountRate() != null ? $s.getAppliedDiscountRate() : 0d;
+    double combinedRate = currentRate > 0d ? combineDiscountRates(currentRate, statusRate) : statusRate;
+    double normalizedRate = normalizeDiscountRate(combinedRate);
+    double newMonthly = baseMonthly > 0 ? roundCurrency(baseMonthly * (1 - normalizedRate)) : $s.getPricePerMonth();
+    double newHourly = baseHourly > 0 ? roundCurrency(baseHourly * (1 - normalizedRate)) : $s.getPricePerHour();
+    int updatedScore = $s.getScore() + 6;
+    String label = "Loyalty discount 15% for Gold status";
+    List<String> highlights = $s.getRuleHighlights();
+    if (highlights != null && highlights.contains(label)) {
+        return;
+    }
+
+    $s.setPricePerMonth(newMonthly);
+    $s.setPricePerHour(newHourly);
+    $s.setAppliedDiscountRate(normalizedRate);
+    $s.addRuleHighlight(label);
+    $s.setScore(updatedScore);
+    update($s);
 end
 
 rule "Status gold performance"

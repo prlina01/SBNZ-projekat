@@ -55,6 +55,7 @@ public class User {
     @Transient
     private List<Rating> ratings = new ArrayList<>();
 
+
     public User() {
     }
 
@@ -141,4 +142,5 @@ public class User {
     public void setRatings(List<Rating> ratings) {
         this.ratings = ratings;
     }
+
 }

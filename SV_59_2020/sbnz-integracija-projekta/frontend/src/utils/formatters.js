@@ -14,3 +14,18 @@ export const formatCurrency = (amount, currency = 'USD') => {
   });
   return formatter.format(amount ?? 0);
 };
+
+export const formatUserStatus = (status) => {
+  if (!status) {
+    return 'Basic';
+  }
+
+  const map = {
+    NONE: 'Basic',
+    BRONZE: 'Bronze',
+    SILVER: 'Silver',
+    GOLD: 'Gold',
+  };
+
+  return map[status] ?? humanizeEnum(status);
+};

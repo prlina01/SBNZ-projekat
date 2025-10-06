@@ -61,3 +61,39 @@
   background: rgba(99, 102, 241, 0.1);
   color: var(--color-text-strong);
 }
+
+.navbar__status {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.16);
+  color: var(--color-text-strong);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  text-transform: uppercase;
+}
+
+.navbar__status--none {
+  background: rgba(148, 163, 184, 0.16);
+  border-color: rgba(148, 163, 184, 0.35);
+  color: var(--color-text-muted);
+}
+
+.navbar__status--bronze {
+  background: rgba(205, 127, 50, 0.2);
+  border-color: rgba(205, 127, 50, 0.35);
+  color: #8c5410;
+}
+
+.navbar__status--silver {
+  background: rgba(209, 213, 219, 0.25);
+  border-color: rgba(148, 163, 184, 0.35);
+  color: #374151;
+}
+
+.navbar__status--gold {
+  background: rgba(250, 204, 21, 0.22);
+  border-color: rgba(217, 119, 6, 0.35);
+  color: #92400e;
+}

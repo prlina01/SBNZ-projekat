@@ -44,7 +44,7 @@ public class AuthController {
         User user = userService.registerUser(request.getUsername(), request.getPassword());
         String token = jwtService.generateToken(user.getUsername(), user.getRoles());
         Set<String> roles = user.getRoles().stream().map(Role::name).collect(Collectors.toSet());
-        return ResponseEntity.ok(new AuthResponse(token, roles));
+    return ResponseEntity.ok(new AuthResponse(token, roles, user.getStatus()));
     }
 
     @PostMapping("/login")
@@ -57,7 +57,7 @@ public class AuthController {
                 .orElseThrow(() -> new IllegalStateException("User not found after authentication"));
         String token = jwtService.generateToken(username, account.getRoles());
         Set<String> roles = account.getRoles().stream().map(Role::name).collect(Collectors.toSet());
-        return ResponseEntity.ok(new AuthResponse(token, roles));
+    return ResponseEntity.ok(new AuthResponse(token, roles, account.getStatus()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

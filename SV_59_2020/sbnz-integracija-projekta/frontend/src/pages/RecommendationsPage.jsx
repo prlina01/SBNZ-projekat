@@ -3,6 +3,7 @@ import RecommendationForm from '../components/RecommendationForm.jsx';
 import ServiceCard from '../components/ServiceCard.jsx';
 import { fetchRecommendations, rentServiceOffering } from '../api/services.js';
 import { humanizeEnum } from '../utils/formatters.js';
+import useAuth from '../hooks/useAuth';
 
 const RecommendationsPage = () => {
   const [results, setResults] = useState([]);
@@ -13,6 +14,7 @@ const RecommendationsPage = () => {
   const [rentingId, setRentingId] = useState(null);
   const [rentFeedback, setRentFeedback] = useState(null);
   const [rentError, setRentError] = useState(null);
+  const { refreshProfile } = useAuth();
 
   const handleSubmit = async (payload, rawFilters) => {
     setLoading(true);
@@ -58,6 +60,9 @@ const RecommendationsPage = () => {
         serviceOfferingId: service.id,
         purpose: purposeLabel,
         durationDays,
+      });
+      await refreshProfile().catch((error) => {
+        console.warn('Failed to refresh profile after rental', error);
       });
       setRentFeedback(`Rental confirmed – ${service.name} is yours for ${durationDays} day${durationDays === 1 ? '' : 's'}.`);
     } catch (err) {

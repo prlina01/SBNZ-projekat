@@ -31,16 +31,21 @@ export const AuthProvider = ({ children }) => {
     }
   }, [session]);
 
-  const buildSession = useCallback((token, roles, fallbackUsername) => {
+  const buildSession = useCallback((token, roles, fallbackUsername, status) => {
     const payload = decodeJwtPayload(token);
     const username = payload?.sub ?? fallbackUsername ?? null;
-    return { token, roles: Array.from(roles ?? []), username };
+    return {
+      token,
+      roles: Array.from(roles ?? []),
+      username,
+      status: status ?? null,
+    };
   }, []);
 
   const login = useCallback(
     async (credentials) => {
       const data = await authApi.login(credentials);
-      const nextSession = buildSession(data.token, data.roles, credentials.username);
+      const nextSession = buildSession(data.token, data.roles, credentials.username, data.status);
       setSession(nextSession);
       return nextSession;
     },
@@ -50,7 +55,7 @@ export const AuthProvider = ({ children }) => {
   const register = useCallback(
     async (payload) => {
       const data = await authApi.register(payload);
-      const nextSession = buildSession(data.token, data.roles, payload.username);
+      const nextSession = buildSession(data.token, data.roles, payload.username, data.status);
       setSession(nextSession);
       return nextSession;
     },
@@ -61,19 +66,63 @@ export const AuthProvider = ({ children }) => {
     setSession(null);
   }, []);
 
+  const updateUserStatus = useCallback((nextStatus) => {
+    setSession((prev) => {
+      if (!prev) {
+        return prev;
+      }
+      return {
+        ...prev,
+        status: nextStatus ?? null,
+      };
+    });
+  }, []);
+
+  const refreshProfile = useCallback(async () => {
+    if (!session?.token) {
+      return null;
+    }
+
+    const profile = await authApi.fetchCurrentUser();
+    setSession((prev) => {
+      if (!prev) {
+        return prev;
+      }
+      return {
+        ...prev,
+        username: profile?.username ?? prev.username,
+        roles: Array.isArray(profile?.roles) ? Array.from(profile.roles) : prev.roles,
+        status: profile?.status ?? prev.status ?? null,
+      };
+    });
+    return profile;
+  }, [session?.token]);
+
+  useEffect(() => {
+    if (!session?.token) {
+      return;
+    }
+    refreshProfile().catch((error) => {
+      console.warn('Failed to refresh user profile', error);
+    });
+  }, [session?.token, refreshProfile]);
+
   const value = useMemo(
     () => ({
       token: session?.token ?? null,
       roles: session?.roles ?? [],
       username: session?.username ?? null,
+      userStatus: session?.status ?? null,
       isAuthenticated: Boolean(session?.token),
       isAdmin: (session?.roles ?? []).includes('ADMIN'),
       isUser: (session?.roles ?? []).includes('USER'),
       login,
       register,
       logout,
+      updateUserStatus,
+      refreshProfile,
     }),
-    [session, login, register, logout],
+    [session, login, register, logout, updateUserStatus, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
