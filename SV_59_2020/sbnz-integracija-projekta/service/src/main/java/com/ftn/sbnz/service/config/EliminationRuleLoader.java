@@ -162,11 +162,11 @@ public class EliminationRuleLoader {
         "$server",
         "Server(networkBandwidth < $min)",
         "eval(true)"));
-    rows.add(row("insufficient throughput",
-        "SearchFilters(concurrentUsers > 0, $users : concurrentUsers)",
-        "$server",
-        "Server()",
-        "eval($server.getNetworkBandwidth() < ($users <= 100 ? 200 : ($users <= 500 ? 500 : 1000)))"));
+    // rows.add(row("insufficient throughput",
+    //     "SearchFilters(concurrentUsers > 0, $users : concurrentUsers)",
+    //     "$server",
+    //     "Server()",
+    //     "eval($server.getNetworkBandwidth() < ($users <= 100 ? 200 : ($users <= 500 ? 500 : 1000)))"));
     rows.add(row("over budget (low)",
         "SearchFilters(budget == SearchFilters.Budget.LOW)",
         "$server",

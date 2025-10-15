@@ -1,0 +1,10 @@
+.alert-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.alert-stack .alert {
+  margin-bottom: 0;
+}

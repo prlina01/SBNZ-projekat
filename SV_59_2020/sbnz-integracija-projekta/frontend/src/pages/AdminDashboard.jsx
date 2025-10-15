@@ -20,6 +20,7 @@ import {
 import { humanizeEnum, formatCurrency } from '../utils/formatters.js';
 import { API_BASE_URL } from '../api/client.js';
 import { useAuthContext } from '../context/AuthContext.jsx';
+import './AdminDashboard.css';
 
 const AdminDashboard = () => {
   const { token } = useAuthContext();
@@ -30,11 +31,12 @@ const AdminDashboard = () => {
   const [selectedService, setSelectedService] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notification, setNotification] = useState(null);
+  const [alertNotifications, setAlertNotifications] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [pendingStatus, setPendingStatus] = useState('idle');
   const [pendingError, setPendingError] = useState(null);
   const [pendingAction, setPendingAction] = useState(null);
-  const lastAlertByServer = useRef(new Map());
+  const activeAlertIdsByServer = useRef(new Map());
 
   const loadServices = useCallback(async () => {
     setStatus('loading');
@@ -104,14 +106,9 @@ const AdminDashboard = () => {
           const payload = JSON.parse(frame.body);
           const typeValue = (payload?.type ?? '').toString().toLowerCase();
           const normalizedType = typeValue === 'positive' ? 'positive' : 'negative';
-          const serverKey = payload?.serverId ?? payload?.serverName ?? 'unknown-server';
-
-          const previousType = lastAlertByServer.current.get(serverKey);
-          if (previousType === normalizedType) {
-            return;
-          }
-
-          lastAlertByServer.current.set(serverKey, normalizedType);
+          const serverKey = payload?.serverId ?? payload?.serverName ?? `unknown-${Date.now()}`;
+          const dismissAfter = Number.isFinite(payload?.dismissAfter) ? payload.dismissAfter : 30000;
+          const alertId = `${serverKey}-${Date.now()}`;
 
           const decoratedMessage = [
             normalizedType === 'positive' ? '✅' : '⚠️',
@@ -123,12 +120,32 @@ const AdminDashboard = () => {
             .filter(Boolean)
             .join(' ');
 
-          setNotification({
-            type: normalizedType === 'positive' ? 'success' : 'danger',
-            message: decoratedMessage,
-            dismissAfter: 30000,
-            banner: true,
+          setAlertNotifications((prev) => {
+            const filtered = prev.filter((entry) => entry.serverKey !== serverKey);
+            return [
+              ...filtered,
+              {
+                id: alertId,
+                serverKey,
+                type: normalizedType === 'positive' ? 'success' : 'danger',
+                message: decoratedMessage,
+                dismissAfter,
+                banner: true,
+              },
+            ];
           });
+
+          activeAlertIdsByServer.current.set(serverKey, alertId);
+
+          window.setTimeout(() => {
+            setAlertNotifications((prev) => {
+              if (activeAlertIdsByServer.current.get(serverKey) !== alertId) {
+                return prev;
+              }
+              activeAlertIdsByServer.current.delete(serverKey);
+              return prev.filter((entry) => entry.id !== alertId);
+            });
+          }, Math.max(dismissAfter, 0));
         } catch (err) {
           console.error('Failed to parse admin alert payload', err);
         }
@@ -437,6 +454,20 @@ const AdminDashboard = () => {
           Refresh list
         </button>
       </header>
+
+      {alertNotifications.length > 0 && (
+        <div className="alert-stack">
+          {alertNotifications.map((alert) => (
+            <div
+              key={alert.id}
+              className={`alert alert--${alert.type}${alert.banner ? ' alert--banner' : ''}`}
+              role="status"
+            >
+              {alert.message}
+            </div>
+          ))}
+        </div>
+      )}
 
       {notification && (
         <div

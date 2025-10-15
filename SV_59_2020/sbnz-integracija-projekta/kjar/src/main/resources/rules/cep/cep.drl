@@ -94,7 +94,8 @@ when
     )
     eval($count > 0)
     $modifiedAvg: Number() from $avgScore * $mod
-    $normalizedAvg: Number() from ($modifiedAvg.doubleValue() / 10.0) * 5.0
+    $normalizedAvg: Number() from Math.min(5.0,
+        Math.max(0.0, ($modifiedAvg.doubleValue() / 8.5) * 5.0))
 then
     insert(new PerformanceEvent($s, $normalizedAvg.doubleValue()));
 end

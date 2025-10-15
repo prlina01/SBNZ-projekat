@@ -61,7 +61,31 @@ public class CatalogDataInitializer implements CommandLineRunner {
                         8, Server.GpuModel.NVIDIA_T4, 16,
                         32, 500, Server.StorageType.NVME,
                         true, 1200, true, true,
-                        Server.Region.APAC, true, 1.2, 780)
+                        Server.Region.APAC, true, 1.2, 780),
+                buildOffering("Azure NDv4", "Azure",
+                        Server.Purpose.ML_TRAINING, Server.CpuPerformance.HIGH,
+                        32, Server.GpuModel.NVIDIA_A100, 40,
+                        256, 4096, Server.StorageType.NVME,
+                        true, 1600, true, true,
+                        Server.Region.EU, false, 4.8, 3400),
+                buildOffering("Linode App Scale", "Linode",
+                        Server.Purpose.WEB_APP, Server.CpuPerformance.MEDIUM,
+                        6, Server.GpuModel.NONE, 0,
+                        12, 240, Server.StorageType.SATA,
+                        true, 350, true, false,
+                        Server.Region.US, false, 0.09, 65),
+                buildOffering("IBM Db2 Secure", "IBM",
+                        Server.Purpose.DATABASE, Server.CpuPerformance.HIGH,
+                        24, Server.GpuModel.NONE, 0,
+                        128, 2000, Server.StorageType.NVME,
+                        true, 2200, true, true,
+                        Server.Region.EU, true, 3.8, 2100),
+                buildOffering("Cloudflare Stream Edge", "Cloudflare",
+                        Server.Purpose.STREAMING, Server.CpuPerformance.MEDIUM,
+                        12, Server.GpuModel.NVIDIA_T4, 16,
+                        48, 512, Server.StorageType.NVME,
+                        true, 1500, true, true,
+                        Server.Region.US, true, 0.95, 620)
         ));
     }
 
