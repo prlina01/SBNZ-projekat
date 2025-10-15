@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
 import { PURPOSES, CPU_PERFORMANCE, STORAGE_TYPES, REGIONS } from '../utils/enums.js';
 
@@ -74,8 +75,8 @@ const RecommendationForm = ({ onSubmit, loading }) => {
       const allowHighAvailabilityInner = purposeAnyInner || purpose === 'ML_TRAINING' || purpose === 'DATABASE' || purpose === 'WEB_APP';
       const allowDdosInner = purposeAnyInner || purpose === 'ML_TRAINING' || purpose === 'DATABASE' || purpose === 'WEB_APP' || purpose === 'STREAMING';
       const allowEncryptionInner = purposeAnyInner || purpose === 'ML_TRAINING' || purpose === 'DATABASE';
-      const allowEcoInner = purposeAnyInner || purpose === 'STREAMING';
-  const allowStorageInner = purposeAnyInner || purpose === 'ML_TRAINING' || purpose === 'DATA_ANALYTICS' || purpose === 'DATABASE';
+    const allowEcoInner = purposeAnyInner || purpose === 'STREAMING';
+    const allowStorageInner = purposeAnyInner || purpose === 'ML_TRAINING' || purpose === 'DATA_ANALYTICS' || purpose === 'DATABASE';
 
       let changed = false;
       const updated = { ...prev };
@@ -380,6 +381,15 @@ const RecommendationForm = ({ onSubmit, loading }) => {
       </div>
     </form>
   );
+};
+
+RecommendationForm.propTypes = {
+  onSubmit: PropTypes.func.isRequired,
+  loading: PropTypes.bool,
+};
+
+RecommendationForm.defaultProps = {
+  loading: false,
 };
 
 export default RecommendationForm;

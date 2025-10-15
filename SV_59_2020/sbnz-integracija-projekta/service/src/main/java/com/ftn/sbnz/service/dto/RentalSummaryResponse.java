@@ -12,11 +12,13 @@ public class RentalSummaryResponse {
     private Date startDate;
     private Date plannedEndDate;
     private Date endDate;
+    private Date requestedAt;
     private int durationDays;
     private int remainingDays;
     private Integer rating;
     private boolean active;
     private boolean rateable;
+    private String status;
 
     public RentalSummaryResponse() {
     }
@@ -87,6 +89,14 @@ public class RentalSummaryResponse {
         this.endDate = endDate;
     }
 
+    public Date getRequestedAt() {
+        return requestedAt;
+    }
+
+    public void setRequestedAt(Date requestedAt) {
+        this.requestedAt = requestedAt;
+    }
+
     public int getDurationDays() {
         return durationDays;
     }
@@ -125,5 +135,13 @@ public class RentalSummaryResponse {
 
     public void setRateable(boolean rateable) {
         this.rateable = rateable;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

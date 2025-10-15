@@ -50,3 +50,18 @@ export const rateRental = async (rentalId, score) => {
   const { data } = await api.post(`/api/rentals/${rentalId}/rating`, { score });
   return data;
 };
+
+export const fetchPendingRentalRequests = async () => {
+  const { data } = await api.get('/api/admin/rentals/requests');
+  return data;
+};
+
+export const approveRentalRequest = async (rentalId) => {
+  const { data } = await api.post(`/api/admin/rentals/${rentalId}/approve`);
+  return data;
+};
+
+export const rejectRentalRequest = async (rentalId) => {
+  const { data } = await api.post(`/api/admin/rentals/${rentalId}/reject`);
+  return data;
+};

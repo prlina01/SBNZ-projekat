@@ -13,6 +13,9 @@ import {
   createService,
   updateService,
   deleteService,
+  fetchPendingRentalRequests,
+  approveRentalRequest,
+  rejectRentalRequest,
 } from '../api/services.js';
 import { humanizeEnum, formatCurrency } from '../utils/formatters.js';
 import { API_BASE_URL } from '../api/client.js';
@@ -27,6 +30,10 @@ const AdminDashboard = () => {
   const [selectedService, setSelectedService] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notification, setNotification] = useState(null);
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [pendingStatus, setPendingStatus] = useState('idle');
+  const [pendingError, setPendingError] = useState(null);
+  const [pendingAction, setPendingAction] = useState(null);
   const lastAlertByServer = useRef(new Map());
 
   const loadServices = useCallback(async () => {
@@ -43,9 +50,27 @@ const AdminDashboard = () => {
     }
   }, []);
 
+  const loadPendingRequests = useCallback(async () => {
+    setPendingStatus('loading');
+    setPendingError(null);
+    try {
+      const data = await fetchPendingRentalRequests();
+      setPendingRequests(data);
+      setPendingStatus('success');
+    } catch (err) {
+      const message = err?.response?.data?.message || 'Unable to load pending requests right now.';
+      setPendingError(message);
+      setPendingStatus('error');
+    }
+  }, []);
+
   useEffect(() => {
     loadServices();
   }, [loadServices]);
+
+  useEffect(() => {
+    loadPendingRequests();
+  }, [loadPendingRequests]);
 
   useEffect(() => {
     if (!notification) {
@@ -138,6 +163,17 @@ const AdminDashboard = () => {
     return Number.isFinite(rounded) ? rounded.toFixed(1) : '—';
   }, []);
 
+  const formatDateTime = useCallback((value) => {
+    if (!value) {
+      return '—';
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return '—';
+    }
+    return date.toLocaleString();
+  }, []);
+
   const handleCreateOrUpdate = async (payload) => {
     setIsSubmitting(true);
     setNotification(null);
@@ -199,6 +235,57 @@ const AdminDashboard = () => {
       setNotification({ type: 'error', message, dismissAfter: 6000 });
     }
   }, [loadServices]);
+
+  const handleApproveRequest = useCallback(async (request) => {
+    if (!request?.id) {
+      return;
+    }
+    setPendingAction({ id: request.id, type: 'approve' });
+    setNotification(null);
+    try {
+      await approveRentalRequest(request.id);
+      const requester = request.username ? ` for ${request.username}` : '';
+      setNotification({
+        type: 'success',
+        message: `Rental request${requester} approved.`,
+        dismissAfter: 4000,
+      });
+      await Promise.all([loadPendingRequests(), loadServices()]);
+    } catch (err) {
+      const message = err?.response?.data?.message || 'Approval failed. Please try again later.';
+      setNotification({ type: 'error', message, dismissAfter: 6000 });
+    } finally {
+      setPendingAction(null);
+    }
+  }, [loadPendingRequests, loadServices]);
+
+  const handleRejectRequest = useCallback(async (request) => {
+    if (!request?.id) {
+      return;
+    }
+    const confirmed = window.confirm('Reject this rental request? This action cannot be undone.');
+    if (!confirmed) {
+      return;
+    }
+
+    setPendingAction({ id: request.id, type: 'reject' });
+    setNotification(null);
+    try {
+      await rejectRentalRequest(request.id);
+      const requester = request.username ? ` for ${request.username}` : '';
+      setNotification({
+        type: 'info',
+        message: `Rental request${requester} rejected.`,
+        dismissAfter: 4000,
+      });
+      await loadPendingRequests();
+    } catch (err) {
+      const message = err?.response?.data?.message || 'Rejecting failed. Please try again later.';
+      setNotification({ type: 'error', message, dismissAfter: 6000 });
+    } finally {
+      setPendingAction(null);
+    }
+  }, [loadPendingRequests]);
 
   const tableBody = useMemo(() => {
     if (status === 'loading') {
@@ -269,6 +356,76 @@ const AdminDashboard = () => {
     });
   }, [services, status, error, loadServices, handleEdit, handleDelete, renderAverageRating]);
 
+  const pendingTableBody = useMemo(() => {
+    if (pendingStatus === 'loading') {
+      return (
+        <tr>
+          <td colSpan={6} className="table__status">Loading pending requests…</td>
+        </tr>
+      );
+    }
+
+    if (pendingStatus === 'error') {
+      return (
+        <tr>
+          <td colSpan={6} className="table__status table__status--error">
+            <p>{pendingError}</p>
+            <button type="button" className="btn btn--ghost" onClick={loadPendingRequests}>
+              Retry
+            </button>
+          </td>
+        </tr>
+      );
+    }
+
+    if (!pendingRequests.length) {
+      return (
+        <tr>
+          <td colSpan={6} className="table__status">No pending requests right now.</td>
+        </tr>
+      );
+    }
+
+    return pendingRequests.map((request) => {
+      const actionBusy = pendingAction?.id === request.id;
+      const purposeLabel = request.purpose && request.purpose === request.purpose.toUpperCase()
+        ? humanizeEnum(request.purpose)
+        : (request.purpose || '—');
+      return (
+        <tr key={request.id}>
+          <th scope="row">{request.username || 'Unknown user'}</th>
+          <td>
+            <div className="rental-table__service">
+              <strong>{request.serviceName}</strong>
+              <span>{request.providerName}</span>
+            </div>
+          </td>
+          <td>{purposeLabel}</td>
+          <td>{request.durationDays} day{request.durationDays === 1 ? '' : 's'}</td>
+          <td>{formatDateTime(request.requestedAt)}</td>
+          <td className="table__actions">
+            <button
+              type="button"
+              className="btn btn--primary btn--inline"
+              onClick={() => handleApproveRequest(request)}
+              disabled={actionBusy}
+            >
+              {actionBusy && pendingAction?.type === 'approve' ? 'Approving…' : 'Approve'}
+            </button>
+            <button
+              type="button"
+              className="btn btn--danger btn--inline"
+              onClick={() => handleRejectRequest(request)}
+              disabled={actionBusy}
+            >
+              {actionBusy && pendingAction?.type === 'reject' ? 'Rejecting…' : 'Reject'}
+            </button>
+          </td>
+        </tr>
+      );
+    });
+  }, [pendingStatus, pendingRequests, pendingError, loadPendingRequests, pendingAction, formatDateTime, handleApproveRequest, handleRejectRequest]);
+
   return (
     <div className="page admin-page">
       <header className="page__header">
@@ -292,6 +449,28 @@ const AdminDashboard = () => {
 
       <div className="admin-layout">
         <section className="admin-layout__primary">
+          <div className="card">
+            <header className="card__header">
+              <h2>Pending rental approvals</h2>
+              <span className="badge">{pendingRequests.length}</span>
+            </header>
+            <div className="card__body">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">User</th>
+                    <th scope="col">Service</th>
+                    <th scope="col">Purpose</th>
+                    <th scope="col">Duration</th>
+                    <th scope="col">Requested at</th>
+                    <th scope="col" className="table__actions">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>{pendingTableBody}</tbody>
+              </table>
+            </div>
+          </div>
+
           <div className="card">
             <header className="card__header">
               <h2>Catalog overview</h2>

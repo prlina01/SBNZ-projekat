@@ -48,7 +48,7 @@ const UserDashboard = () => {
       setError(message);
       setStatus('error');
     }
-  }, []);
+  }, [refreshProfile]);
 
   useEffect(() => {
     loadRentals();
@@ -63,15 +63,56 @@ const UserDashboard = () => {
     }));
   };
 
+  const getStatusMeta = useCallback((rental) => {
+    const status = (rental.status || '').toUpperCase();
+    switch (status) {
+      case 'PENDING':
+        return {
+          label: 'Na čekanju',
+          badgeClass: 'status-badge status-badge--pending',
+          rowClass: 'rental-table__row--pending',
+          isActive: false,
+        };
+      case 'REJECTED':
+        return {
+          label: 'Odbijeno',
+          badgeClass: 'status-badge status-badge--rejected',
+          rowClass: 'rental-table__row--rejected',
+          isActive: false,
+        };
+      case 'COMPLETED':
+        return {
+          label: 'Završen',
+          badgeClass: 'status-badge',
+          rowClass: 'rental-table__row--inactive',
+          isActive: false,
+        };
+      case 'ACTIVE':
+        return {
+          label: 'Aktivan',
+          badgeClass: 'status-badge status-badge--active',
+          rowClass: undefined,
+          isActive: true,
+        };
+      default:
+        return {
+          label: rental.active ? 'Aktivan' : 'U obradi',
+          badgeClass: rental.active ? 'status-badge status-badge--active' : 'status-badge',
+          rowClass: rental.active ? undefined : 'rental-table__row--inactive',
+          isActive: !!rental.active,
+        };
+    }
+  }, []);
+
   const handleRate = async (rental) => {
     const draft = Number(ratingDrafts[rental.id] ?? 5);
     setRatingBusy(rental.id);
     setRatingError(null);
     setRatingFeedback(null);
     try {
-      const updated = await rateRental(rental.id, draft);
-      setRentals((prev) => prev.map((item) => (item.id === rental.id ? updated : item)));
-  setRatingFeedback(`Thanks! You rated ${rentalLabel(rental)} with ${draft}/5.`);
+    const updated = await rateRental(rental.id, draft);
+    setRentals((prev) => prev.map((item) => (item.id === rental.id ? updated : item)));
+    setRatingFeedback(`Thanks! You rated ${rentalLabel(rental)} with ${draft}/5.`);
       refreshProfile().catch((error) => {
         console.warn('Failed to refresh profile after rating rental', error);
       });
@@ -154,13 +195,13 @@ const UserDashboard = () => {
                       const purposeLabel = rental.purpose && rental.purpose === rental.purpose.toUpperCase()
                         ? humanizeEnum(rental.purpose)
                         : (rental.purpose || '—');
-                      const remainingLabel = rental.remainingDays > 0
+                      const statusMeta = getStatusMeta(rental);
+                      const remainingLabel = statusMeta.isActive && rental.remainingDays > 0
                         ? `${rental.remainingDays} day${rental.remainingDays === 1 ? '' : 's'}`
-                        : '0 days';
-                      const statusLabel = rental.active ? 'Active' : rental.rating ? 'Completed' : 'Awaiting feedback';
+                        : statusMeta.isActive ? '0 days' : '—';
                       const draft = ratingDrafts[rental.id] ?? 5;
                       return (
-                        <tr key={rental.id} className={!rental.active ? 'rental-table__row--inactive' : undefined}>
+                        <tr key={rental.id} className={statusMeta.rowClass}>
                           <td>
                             <div className="rental-table__service">
                               <strong>{rental.serviceName}</strong>
@@ -171,10 +212,10 @@ const UserDashboard = () => {
                           <td>{formatDate(rental.startDate)}</td>
                           <td>{formatDate(rental.plannedEndDate)}</td>
                           <td>
-                            <span className={rental.remainingDays > 0 ? 'badge badge--positive' : 'badge'}>{remainingLabel}</span>
+                            <span className={statusMeta.isActive && rental.remainingDays > 0 ? 'badge badge--positive' : 'badge'}>{remainingLabel}</span>
                           </td>
                           <td>
-                            <span className={rental.active ? 'status-badge status-badge--active' : 'status-badge'}>{statusLabel}</span>
+                            <span className={statusMeta.badgeClass}>{statusMeta.label}</span>
                           </td>
                           <td>
                             {rental.rateable ? (

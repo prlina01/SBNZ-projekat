@@ -112,5 +112,5 @@ rule "Server performance is exceptionally high"
 when
     $pe: PerformanceEvent(averageRating > 3.5) // > 70% of 5
 then
-    insert(new PerformanceReport($pe.getServer(), "Performance for server " + $pe.getServer().getName() + " is exceptionally high (>70%). Consider adding more capacity."));
+    insert(new PerformanceReport($pe.getServer(), "Performance for server " + $pe.getServer().getName() + " is trending up (>70%). Consider adding more capacity."));
 end

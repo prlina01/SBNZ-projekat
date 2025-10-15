@@ -698,6 +698,16 @@
   color: rgb(30, 64, 175);
 }
 
+.status-badge--pending {
+  background: rgba(148, 163, 184, 0.25);
+  color: rgb(71, 85, 105);
+}
+
+.status-badge--rejected {
+  background: rgba(248, 113, 113, 0.25);
+  color: rgb(185, 28, 28);
+}
+
 .btn--inline {
   padding: 0.45rem 0.9rem;
 }
@@ -728,6 +738,14 @@
 
 .rental-table__row--inactive {
   opacity: 0.85;
+}
+
+.rental-table__row--pending {
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.rental-table__row--rejected {
+  background: rgba(248, 113, 113, 0.08);
 }
 
 .alert {

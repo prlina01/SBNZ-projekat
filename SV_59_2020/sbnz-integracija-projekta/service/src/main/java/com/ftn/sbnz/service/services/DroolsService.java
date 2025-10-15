@@ -1,10 +1,12 @@
 package com.ftn.sbnz.service.services;
 
 import com.ftn.sbnz.model.PerformanceReport;
+import com.ftn.sbnz.model.PerformanceEvent;
 import com.ftn.sbnz.model.Rating;
 import com.ftn.sbnz.model.Rental;
 import com.ftn.sbnz.model.Server;
 import com.ftn.sbnz.model.User;
+import com.ftn.sbnz.model.RentalStatus;
 import com.ftn.sbnz.service.notifications.AdminNotificationMessage;
 import com.ftn.sbnz.service.notifications.AdminNotificationPublisher;
 import com.ftn.sbnz.service.repositories.UserRepository;
@@ -19,11 +21,15 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Optional;
+import java.util.Comparator;
+import java.util.Locale;
 
 @Service
 public class DroolsService {
 
     private static final Logger log = LoggerFactory.getLogger(DroolsService.class);
+    private static final double LOW_ALERT_THRESHOLD = 1.5d;
+    private static final double HIGH_ALERT_THRESHOLD = 3.5d;
     private final KieSession kieSession;
     private final AdminNotificationPublisher notificationPublisher;
     private final UserRepository userRepository;
@@ -42,6 +48,19 @@ public class DroolsService {
             throw new IllegalArgumentException("Rental must have an id before syncing with Drools");
         }
 
+        RentalStatus status = rental.getStatus();
+        if (status == RentalStatus.PENDING || status == RentalStatus.REJECTED) {
+            Optional<Rental> existing = findFact(Rental.class, rental.getId());
+            if (existing.isPresent()) {
+                FactHandle handle = kieSession.getFactHandle(existing.get());
+                if (handle != null) {
+                    kieSession.delete(handle);
+                    log.info("Removed rental fact [{}] from Drools due to status {}", rental.getId(), status);
+                }
+            }
+            return;
+        }
+
         User userFact = ensureUserFact(rental.getUser());
         Server serverFact = ensureServerFact(rental);
 
@@ -55,6 +74,7 @@ public class DroolsService {
             fact.setServer(serverFact);
             fact.setRatingScore(rental.getRatingScore());
             fact.setRatedAt(rental.getRatedAt());
+            fact.setStatus(status != null ? status : RentalStatus.ACTIVE);
             FactHandle handle = kieSession.getFactHandle(fact);
             if (handle != null) {
                 kieSession.update(handle, fact);
@@ -65,11 +85,12 @@ public class DroolsService {
                     rental.getStartDate(), rental.getEndDate(), rental.getPurpose(), rental.getDurationDays());
             fact.setRatingScore(rental.getRatingScore());
             fact.setRatedAt(rental.getRatedAt());
+            fact.setStatus(status != null ? status : RentalStatus.ACTIVE);
             kieSession.insert(fact);
             log.info("Inserted new rental fact [{}] into Drools", rental.getId());
         }
 
-    fireRulesAndDrainReports();
+    fireRulesAndDrainReports(serverFact.getId());
     }
 
     public void registerRating(Rental rental, int score) {
@@ -105,7 +126,7 @@ public class DroolsService {
         kieSession.insert(ratingFact);
         log.info("Inserted rating for rental [{}] with score {}", rental.getId(), score);
 
-        fireRulesAndDrainReports();
+        fireRulesAndDrainReports(serverFact.getId());
     }
 
     private User ensureUserFact(User source) {
@@ -182,8 +203,10 @@ public class DroolsService {
         return serverFact;
     }
 
-    private void fireRulesAndDrainReports() {
+    private void fireRulesAndDrainReports(Long serverId) {
         kieSession.fireAllRules();
+
+        logServerSnapshot(serverId);
 
         synchronizeUserStatuses();
 
@@ -191,6 +214,36 @@ public class DroolsService {
             PerformanceReport report = (PerformanceReport) kieSession.getObject(handle);
             dispatchAdminReport(report);
             kieSession.delete(handle);
+        }
+    }
+
+    private void logServerSnapshot(Long serverId) {
+        if (serverId == null) {
+            return;
+        }
+
+        PerformanceEvent latestEvent = kieSession.getObjects(obj -> obj instanceof PerformanceEvent)
+                .stream()
+                .map(PerformanceEvent.class::cast)
+                .filter(event -> event.getServer() != null && serverId.equals(event.getServer().getId()))
+                .max(Comparator.comparing(PerformanceEvent::getTimestamp))
+                .orElse(null);
+
+        if (latestEvent == null) {
+            log.debug("No performance snapshot available for server [{}] yet.", serverId);
+            return;
+        }
+
+        double percentage = (latestEvent.getAverageRating() / 5.0d) * 100.0d;
+        String formatted = String.format(Locale.ROOT, "%.2f%% (avg %.2f)", percentage, latestEvent.getAverageRating());
+        String serverName = latestEvent.getServer().getName();
+
+        if (latestEvent.getAverageRating() < LOW_ALERT_THRESHOLD) {
+            log.warn("SNAPSHOT LOW (<30%): {} -> {}", serverName, formatted);
+        } else if (latestEvent.getAverageRating() > HIGH_ALERT_THRESHOLD) {
+            log.info("SNAPSHOT POSITIVE (>70%): {} -> {}", serverName, formatted);
+        } else {
+            log.info("SNAPSHOT STABLE: {} -> {}", serverName, formatted);
         }
     }
     private void synchronizeUserStatuses() {
